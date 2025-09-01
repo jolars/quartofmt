@@ -1,0 +1,29 @@
+version: "3"
+
+tasks:
+  test-debug:
+    desc: Run tests with debug logging
+    cmds:
+      - RUST_LOG=debug cargo test
+
+  test-trace:
+    desc: Run tests with trace logging for parser
+    cmds:
+      - RUST_LOG=quartofmt::parser=trace cargo test
+
+  test-lexer:
+    desc: Run tests with trace logging for lexer
+    cmds:
+      - RUST_LOG=quartofmt::lexer=trace cargo test
+
+  test-quiet:
+    desc: Run tests quietly (no debug output)
+    cmds:
+      - RUST_LOG=off cargo test
+
+  dev:
+    desc: Development workflow - check, test, lint
+    cmds:
+      - cargo check
+      - cargo test
+      - cargo clippy --all-targets --all-features -- -D warnings

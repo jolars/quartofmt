@@ -1,0 +1,23 @@
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# nix -----------------------------------------------
+
+# Ignore build outputs from performing a nix-build or `nix build` command
+result
+result-*
+
+# Ignore direnv folder
+.direnv/
+
+
+# Added by cargo
+
+/target
