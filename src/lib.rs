@@ -9,7 +9,9 @@ pub use parser::parse;
 
 /// Main formatting function
 pub fn format_str(input: &str, line_width: Option<usize>) -> String {
-    let tree = parse(input);
+    // Normalize line endings to Unix style first
+    let normalized_input = input.replace("\r\n", "\n");
+    let tree = parse(&normalized_input);
     format_tree(&tree, line_width.unwrap_or(80))
 }
 
