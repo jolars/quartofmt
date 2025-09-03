@@ -7,7 +7,24 @@ pub mod syntax;
 pub use formatter::format_tree;
 pub use parser::parse;
 
-/// Main formatting function
+/// Formats a Quarto document string with the specified line width.
+///
+/// This function normalizes line endings, preserves code blocks and frontmatter,
+/// and applies consistent paragraph wrapping.
+///
+/// # Examples
+///
+/// ```rust
+/// use quartofmt::format_str;
+///
+/// let input = "This is a very long line that should be wrapped.";
+/// let formatted = format_str(input, Some(80));
+/// ```
+///
+/// # Arguments
+///
+/// * `input` - The Quarto document content to format
+/// * `line_width` - Optional line width (defaults to 80)
 pub fn format(input: &str, line_width: Option<usize>) -> String {
     // Normalize line endings to Unix style first
     let normalized_input = input.replace("\r\n", "\n");
