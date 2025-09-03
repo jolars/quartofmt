@@ -23,7 +23,7 @@ quartofmt --write document.qmd
 quartofmt --check document.qmd
 
 # Format from stdin
-cat document.qmd | quartofmt
+quartofmt document.qmd | cat
 ```
 
 ## Configuration
