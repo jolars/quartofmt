@@ -15,10 +15,10 @@ pub use parser::parse;
 /// # Examples
 ///
 /// ```rust
-/// use quartofmt::format_str;
+/// use quartofmt::format;
 ///
 /// let input = "This is a very long line that should be wrapped.";
-/// let formatted = format_str(input, Some(80));
+/// let formatted = format(input, Some(80));
 /// ```
 ///
 /// # Arguments
