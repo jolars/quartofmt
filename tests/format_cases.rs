@@ -26,9 +26,9 @@ fn run_case(dir: &Path) -> io::Result<()> {
         let diff = diff::lines(&expected, &output)
             .into_iter()
             .map(|d| match d {
-                diff::Result::Left(l) => format!("-{}", l),
-                diff::Result::Right(r) => format!("+{}", r),
-                diff::Result::Both(b, _) => format!(" {}", b),
+                diff::Result::Left(l) => format!("-{l}"),
+                diff::Result::Right(r) => format!("+{r}"),
+                diff::Result::Both(b, _) => format!(" {b}"),
             })
             .collect::<Vec<_>>()
             .join("\n");

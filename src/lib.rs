@@ -44,7 +44,7 @@ mod tests {
 
         // Check that lines are wrapped
         for line in output.lines() {
-            assert!(line.len() <= 20, "Line too long: '{}'", line);
+            assert!(line.len() <= 20, "Line too long: '{line}'");
         }
     }
 

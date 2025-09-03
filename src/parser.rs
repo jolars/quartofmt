@@ -78,15 +78,14 @@ impl<'a> Parser<'a> {
             iterations += 1;
             if iterations > 1000 {
                 panic!(
-                    "Too many iterations in parse_document! Current token: {:?} at pos {}",
+                    "Too many iterations in parse_document! Current token: {:?} at pos {pos}",
                     self.current_token(),
-                    self.pos
+                    pos = self.pos
                 );
             }
 
             log::trace!(
-                "Parse iteration {}: pos={}, token={:?}",
-                iterations,
+                "Parse iteration {iterations}: pos={}, token={:?}",
                 self.pos,
                 self.current_token()
             );
@@ -252,25 +251,23 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 Some(SyntaxKind::WHITESPACE) => {
-                    log::trace!("Paragraph iteration {}: advancing whitespace", iterations);
+                    log::trace!("Paragraph iteration {iterations}: advancing whitespace");
                     self.advance();
                 }
                 Some(SyntaxKind::NEWLINE) => {
-                    log::trace!("Paragraph iteration {}: advancing newline", iterations);
+                    log::trace!("Paragraph iteration {iterations}: advancing newline");
                     self.advance();
                 }
                 Some(SyntaxKind::TEXT) => {
                     log::trace!(
-                        "Paragraph iteration {}: advancing text {:?}",
-                        iterations,
+                        "Paragraph iteration {iterations}: advancing text {:?}",
                         self.current_token()
                     );
                     self.advance();
                 }
                 _ => {
                     log::trace!(
-                        "Paragraph iteration {}: advancing other token {:?}",
-                        iterations,
+                        "Paragraph iteration {iterations}: advancing other token {:?}",
                         self.current_token()
                     );
                     self.advance();

@@ -72,7 +72,7 @@ fn main() -> io::Result<()> {
             std::process::exit(1);
         }
     } else {
-        print!("{}", output);
+        print!("{output}");
     }
 
     Ok(())
