@@ -2,7 +2,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use quartofmt::format_str;
+use quartofmt::format;
 
 fn cases_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -20,7 +20,7 @@ fn run_case(dir: &Path) -> io::Result<()> {
         Err(_) => input.clone(), // default to round-trip if expected is absent
     };
 
-    let output = format_str(&input, Some(80));
+    let output = format(&input, Some(80));
 
     if output != expected {
         let diff = diff::lines(&expected, &output)

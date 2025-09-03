@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use clap::Parser;
 
-use quartofmt::format_str;
+use quartofmt::format;
 
 #[derive(Parser)]
 #[command(name = "quartofmt")]
@@ -55,7 +55,7 @@ fn main() -> io::Result<()> {
     let (cfg, _cfg_path) = quartofmt::config::load(cli.config.as_deref(), &start_dir)?;
 
     let input = read_all(cli.file.as_ref())?;
-    let output = format_str(&input, cfg.line_width);
+    let output = format(&input, cfg.line_width);
 
     if cli.check {
         if input != output {
