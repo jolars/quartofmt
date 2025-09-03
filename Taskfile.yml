@@ -1,6 +1,11 @@
 version: "3"
 
 tasks:
+  lint:
+    desc: Run linter
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
+
   test-debug:
     desc: Run tests with debug logging
     cmds:
