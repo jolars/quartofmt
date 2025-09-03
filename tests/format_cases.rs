@@ -20,6 +20,8 @@ fn run_case(dir: &Path) -> io::Result<()> {
         Err(_) => input.clone(), // default to round-trip if expected is absent
     };
 
+    let expected = expected.replace("\r\n", "\n");
+
     let output = format(&input, Some(80));
 
     if output != expected {
