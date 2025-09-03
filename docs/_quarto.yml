@@ -1,0 +1,22 @@
+project:
+  type: website
+
+website:
+  title: "quartofmt"
+  description: "A code formatter for Quarto documents"
+  site-url: "https://jolars.github.io/quartofmt/"
+  repo-url: "https://github.com/jolars/quartofmt"
+  repo-actions: [edit, issue]
+  search: true
+
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+
+format:
+  html:
+    toc: true
+    theme: cosmo
+
+date-format: long
