@@ -2,7 +2,6 @@
 title: quartofmt
 ---
 
-This is the documentation for `quartofmt` package, which
-is a command line tool for formatting
-quarto documents.
+This is the documentation for `quartofmt` package, which is a command line tool
+for formatting quarto documents.
 
