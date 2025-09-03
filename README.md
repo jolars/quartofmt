@@ -1,5 +1,7 @@
 # quartofmt: A Formatter for Quarto, Pandoc, and Markdown
 
+[![Build and Test](https://github.com/jolars/quartofmt/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/jolars/quartofmt/actions/workflows/build-and-test.yml)
+
 A CLI formatter for Quarto (`.qmd`), Pandoc, and Markdown files.
 
 ## Installation
