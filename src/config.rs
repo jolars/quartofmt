@@ -79,16 +79,16 @@ pub fn load(explicit: Option<&Path>, start_dir: &Path) -> io::Result<(Config, Op
         return Ok((cfg, Some(path.to_path_buf())));
     }
 
-    if let Some(p) = find_in_tree(start_dir) {
-        if let Ok(cfg) = read_config(&p) {
-            return Ok((cfg, Some(p)));
-        }
+    if let Some(p) = find_in_tree(start_dir)
+        && let Ok(cfg) = read_config(&p)
+    {
+        return Ok((cfg, Some(p)));
     }
 
-    if let Some(p) = xdg_config_path() {
-        if let Ok(cfg) = read_config(&p) {
-            return Ok((cfg, Some(p)));
-        }
+    if let Some(p) = xdg_config_path()
+        && let Ok(cfg) = read_config(&p)
+    {
+        return Ok((cfg, Some(p)));
     }
 
     Ok((Config::default(), None))
