@@ -32,3 +32,8 @@ tasks:
       - cargo check
       - cargo test
       - cargo clippy --all-targets --all-features -- -D warnings
+
+  docs-preview:
+    desc: Preview documentation site locally
+    cmds:
+      - cd docs && quarto preview --no-browser
