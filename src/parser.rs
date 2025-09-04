@@ -219,8 +219,20 @@ impl<'a> Parser<'a> {
 
     fn parse_math_block(&mut self) {
         self.builder.start_node(SyntaxKind::MathBlock.into());
-        // Parse $$ math $$
-        self.advance(); // placeholder
+
+        // Opening $$
+        self.advance(); // consume opening $$
+
+        // Content until closing $$
+        while !self.at_eof() && !self.at(SyntaxKind::MathMarker) {
+            self.advance();
+        }
+
+        // Closing $$
+        if self.at(SyntaxKind::MathMarker) {
+            self.advance();
+        }
+
         self.builder.finish_node();
     }
 
