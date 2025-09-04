@@ -210,10 +210,40 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_fenced_div(&mut self) {
-        // Similar to code block but for :::
         self.builder.start_node(SyntaxKind::FencedDiv.into());
-        // Implementation similar to parse_code_block
-        self.advance(); // placeholder
+
+        // Opening fence
+        self.builder.start_node(SyntaxKind::DivFenceOpen.into());
+        self.advance(); // div marker (:::)
+
+        // Div info (class, attributes)
+        if self.at(SyntaxKind::TEXT) || self.at(SyntaxKind::WHITESPACE) {
+            self.builder.start_node(SyntaxKind::DivInfo.into());
+            while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+                self.advance();
+            }
+            self.builder.finish_node();
+        }
+
+        if self.at(SyntaxKind::NEWLINE) {
+            self.advance();
+        }
+        self.builder.finish_node();
+
+        // Div content
+        self.builder.start_node(SyntaxKind::DivContent.into());
+        while !self.at_eof() && !self.at(SyntaxKind::DivMarker) {
+            self.advance();
+        }
+        self.builder.finish_node();
+
+        // Closing fence
+        if self.at(SyntaxKind::DivMarker) {
+            self.builder.start_node(SyntaxKind::DivFenceClose.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+
         self.builder.finish_node();
     }
 
