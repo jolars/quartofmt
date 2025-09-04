@@ -102,4 +102,13 @@ mod tests {
         let output3 = format(input3, Some(80));
         assert_eq!(output3, "Leading and trailing\n");
     }
+
+    #[test]
+    fn math_no_wrap() {
+        let input = "$$\n\\begin{matrix}\n  A & B\\\\\n  C & D\n\\end{matrix}\n$$\n";
+        let output = format(input, Some(10));
+
+        // Math blocks should not be wrapped
+        assert_eq!(output, input);
+    }
 }
