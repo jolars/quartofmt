@@ -33,6 +33,16 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn is_list_marker(&self) -> bool {
+        // Check if this is a list marker (-, +, *) followed by space
+        if let Some(ch) = self.current_char() {
+            if matches!(ch, '-' | '+' | '*') {
+                return self.peek_char(1) == Some(' ');
+            }
+        }
+        false
+    }
+
     pub fn advance_while<F>(&mut self, mut predicate: F) -> usize
     where
         F: FnMut(char) -> bool,
@@ -165,6 +175,32 @@ impl<'a> Lexer<'a> {
                     kind: SyntaxKind::BlockQuoteMarker,
                     len: 1,
                 })
+            }
+
+            '-' | '+' | '*' if self.is_list_marker() => {
+                self.advance();
+                Some(Token {
+                    kind: SyntaxKind::ListMarker,
+                    len: 1,
+                })
+            }
+
+            '-' if self.starts_with("---") => {
+                let len = self.advance_while(|c| c == '-');
+                // Only treat as frontmatter delimiter if it's exactly 3 or more dashes
+                if len >= 3 {
+                    Some(Token {
+                        kind: SyntaxKind::FrontmatterDelim,
+                        len,
+                    })
+                } else {
+                    // This shouldn't happen since we check starts_with("---")
+                    // but let's handle it safely
+                    Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len: 1,
+                    })
+                }
             }
 
             _ => {

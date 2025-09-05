@@ -94,6 +94,31 @@ impl Formatter {
                 }
             }
 
+            SyntaxKind::ListItem => {
+                let text = node.text().to_string();
+
+                // Extract marker and content
+                if let Some(marker_end) = text.find(' ') {
+                    let marker = &text[..marker_end + 1]; // Include the space
+                    let content = text[marker_end + 1..].trim();
+
+                    if !content.is_empty() {
+                        // Wrap the content with proper indentation
+                        let wrapped =
+                            textwrap::fill(content, self.line_width.saturating_sub(marker.len()));
+                        for (i, line) in wrapped.lines().enumerate() {
+                            if i == 0 {
+                                self.output.push_str(marker);
+                            } else {
+                                self.output.push_str(&" ".repeat(marker.len()));
+                            }
+                            self.output.push_str(line);
+                            self.output.push('\n');
+                        }
+                    }
+                }
+            }
+
             SyntaxKind::CodeBlock
             | SyntaxKind::FencedDiv
             | SyntaxKind::MathBlock

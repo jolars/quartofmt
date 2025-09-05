@@ -208,4 +208,19 @@ mod tests {
         // The link should still be functional
         assert!(output2.contains("https://example.com"));
     }
+
+    #[test]
+    fn list_roundtrip() {
+        let input = "- First item\n- Second item\n";
+        let output = format(input, Some(80));
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn list_wrapping() {
+        let input = "- A list with items that should wrap properly and retain their markers\n- Second item with more text to wrap\n";
+        let output = format(input, Some(31));
+        let expected = "- A list with items that should\n  wrap properly and retain\n  their markers\n- Second item with more text\n  to wrap\n";
+        assert_eq!(output, expected);
+    }
 }

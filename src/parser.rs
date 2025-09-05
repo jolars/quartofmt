@@ -96,6 +96,7 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::MathMarker) => self.parse_math_block(),
                 Some(SyntaxKind::BlockQuoteMarker) => self.parse_block_quote(),
+                Some(SyntaxKind::ListMarker) => self.parse_list_item(),
                 Some(SyntaxKind::NEWLINE) if self.is_blank_line() => self.parse_blank_line(),
                 Some(SyntaxKind::WHITESPACE) => {
                     // Skip standalone whitespace
@@ -307,6 +308,32 @@ impl<'a> Parser<'a> {
             if !self.at(SyntaxKind::BlockQuoteMarker) {
                 break;
             }
+        }
+
+        self.builder.finish_node();
+    }
+
+    fn parse_list_item(&mut self) {
+        self.builder.start_node(SyntaxKind::ListItem.into());
+
+        // Consume the list marker (-, +, *)
+        if self.at(SyntaxKind::ListMarker) {
+            self.advance();
+        }
+
+        // Consume the space after the marker
+        if self.at(SyntaxKind::WHITESPACE) {
+            self.advance();
+        }
+
+        // Parse the rest of the line as content
+        while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+            self.advance();
+        }
+
+        // Consume the newline
+        if self.at(SyntaxKind::NEWLINE) {
+            self.advance();
         }
 
         self.builder.finish_node();

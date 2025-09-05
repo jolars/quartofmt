@@ -14,6 +14,7 @@ pub enum SyntaxKind {
     BlockQuoteMarker, // >
     ImageLinkStart,   // ![
     LinkStart,        // [
+    ListMarker,       // - + *
 
     // Composite nodes
     ROOT,
@@ -25,6 +26,7 @@ pub enum SyntaxKind {
     PARAGRAPH,
     BlankLine,
     BlockQuote,
+    ListItem,
 
     // Code block parts
     CodeFenceOpen,
