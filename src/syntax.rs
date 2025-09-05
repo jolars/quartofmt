@@ -26,6 +26,7 @@ pub enum SyntaxKind {
     PARAGRAPH,
     BlankLine,
     BlockQuote,
+    List,
     ListItem,
 
     // Code block parts

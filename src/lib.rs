@@ -223,4 +223,27 @@ mod tests {
         let expected = "- A list with items that should\n  wrap properly and retain\n  their markers\n- Second item with more text\n  to wrap\n";
         assert_eq!(output, expected);
     }
+
+    #[test]
+    fn nested_list_wrapping() {
+        let input = "- Top level\n  - Nested level 1 with some text that should wrap\n    - Nested level 2 with even more text to wrap and demonstrate nesting\n";
+        let output = format(input, Some(32));
+        let expected = "- Top level\n  - Nested level 1 with some\n    text that should wrap\n    - Nested level 2 with even\n      more text to wrap and\n      demonstrate nesting\n";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn list_item_link_no_break() {
+        let input = "- A list item with a link ![some link that is very long](./example.com/very/long/path/to/file) in it\n";
+        let output = format(input, Some(30));
+
+        // The link should not be broken at the ]( boundary
+        assert!(
+            !output.contains("]\n("),
+            "Link text and URL should not be separated in list items"
+        );
+
+        // The link should still be functional
+        assert!(output.contains("./example.com/very/long/path/to/file"));
+    }
 }

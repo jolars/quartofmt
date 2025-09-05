@@ -13,30 +13,46 @@ impl Formatter {
         }
     }
 
+    fn wrap_text(&self, text: &str, width: usize) -> String {
+        if text.trim().is_empty() {
+            return String::new();
+        }
+
+        // Normalize whitespace: split into words and rejoin with single spaces
+        let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
+
+        // Create custom line breaking options that prevent breaking at ](
+        let options = textwrap::Options::new(width)
+            .break_words(false)
+            .word_separator(textwrap::WordSeparator::AsciiSpace)
+            .word_splitter(textwrap::WordSplitter::NoHyphenation);
+
+        // Replace ]( with a non-breaking sequence temporarily
+        let protected = normalized.replace("](", "RIGHTBRACKET_LEFTPAREN");
+        let wrapped = textwrap::fill(&protected, options);
+
+        // Restore the original syntax
+        wrapped.replace("RIGHTBRACKET_LEFTPAREN", "](")
+    }
+
     pub fn format(mut self, node: &SyntaxNode) -> String {
-        self.format_node(node);
+        self.format_node(node, 0);
         self.output
     }
 
-    fn format_node(&mut self, node: &SyntaxNode) {
+    fn format_node(&mut self, node: &SyntaxNode, indent: usize) {
         match node.kind() {
             SyntaxKind::ROOT | SyntaxKind::DOCUMENT => {
                 for el in node.children_with_tokens() {
                     match el {
-                        rowan::NodeOrToken::Node(n) => self.format_node(&n),
-                        rowan::NodeOrToken::Token(t) => {
-                            // Only preserve structural tokens, not whitespace
-                            match t.kind() {
-                                SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {
-                                    // Skip these - they'll be handled by proper formatting
-                                }
-                                SyntaxKind::ImageLinkStart | SyntaxKind::LinkStart => {
-                                    // Preserve these as unbreakable units
-                                    self.output.push_str(t.text());
-                                }
-                                _ => self.output.push_str(t.text()),
+                        rowan::NodeOrToken::Node(n) => self.format_node(&n, indent),
+                        rowan::NodeOrToken::Token(t) => match t.kind() {
+                            SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {}
+                            SyntaxKind::ImageLinkStart | SyntaxKind::LinkStart => {
+                                self.output.push_str(t.text());
                             }
-                        }
+                            _ => self.output.push_str(t.text()),
+                        },
                     }
                 }
             }
@@ -59,7 +75,7 @@ impl Formatter {
                         }
                         _ => {
                             // Handle other content within block quotes
-                            self.format_node(&child);
+                            self.format_node(&child, indent);
                         }
                     }
                 }
@@ -67,25 +83,10 @@ impl Formatter {
 
             SyntaxKind::PARAGRAPH => {
                 let text = node.text().to_string();
+                let wrapped = self.wrap_text(&text, self.line_width);
 
-                // Normalize whitespace: split into words and rejoin with single spaces
-                let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
-
-                if !normalized.is_empty() {
-                    // Create custom line breaking options that prevent breaking at ](
-                    let options = textwrap::Options::new(self.line_width)
-                        .break_words(false)
-                        .word_separator(textwrap::WordSeparator::AsciiSpace)
-                        .word_splitter(textwrap::WordSplitter::NoHyphenation);
-
-                    // Replace ]( with a non-breaking sequence temporarily
-                    let protected = normalized.replace("](", "RIGHTBRACKET_LEFTPAREN");
-
-                    let wrapped = textwrap::fill(&protected, options);
-
-                    // Restore the original syntax
-                    let final_text = wrapped.replace("RIGHTBRACKET_LEFTPAREN", "](");
-                    self.output.push_str(&final_text);
+                if !wrapped.is_empty() {
+                    self.output.push_str(&wrapped);
                 }
 
                 // Always end paragraphs with a newline for proper separation
@@ -94,27 +95,42 @@ impl Formatter {
                 }
             }
 
+            SyntaxKind::List => {
+                for child in node.children() {
+                    self.format_node(&child, indent);
+                }
+            }
+
             SyntaxKind::ListItem => {
-                let text = node.text().to_string();
-
-                // Extract marker and content
-                if let Some(marker_end) = text.find(' ') {
-                    let marker = &text[..marker_end + 1]; // Include the space
-                    let content = text[marker_end + 1..].trim();
-
+                let node_text = node.text().to_string();
+                let local_indent = node_text.chars().take_while(|c| c.is_whitespace()).count();
+                let total_indent = indent + local_indent;
+                let trimmed = node_text.trim_start();
+                if let Some(marker_end) = trimmed.find(' ') {
+                    let marker = &trimmed[..marker_end + 1];
+                    let content = trimmed[marker_end + 1..].trim();
                     if !content.is_empty() {
-                        // Wrap the content with proper indentation
-                        let wrapped =
-                            textwrap::fill(content, self.line_width.saturating_sub(marker.len()));
+                        let available_width =
+                            self.line_width.saturating_sub(marker.len() + total_indent);
+                        let wrapped = self.wrap_text(content, available_width);
+
                         for (i, line) in wrapped.lines().enumerate() {
                             if i == 0 {
+                                self.output.push_str(&" ".repeat(total_indent));
                                 self.output.push_str(marker);
                             } else {
-                                self.output.push_str(&" ".repeat(marker.len()));
+                                self.output
+                                    .push_str(&" ".repeat(total_indent + marker.len()));
                             }
                             self.output.push_str(line);
                             self.output.push('\n');
                         }
+                    }
+                }
+                // Format nested lists inside this list item with increased indent
+                for child in node.children() {
+                    if child.kind() == SyntaxKind::List {
+                        self.format_node(&child, total_indent + 2);
                     }
                 }
             }

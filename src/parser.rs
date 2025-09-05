@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::MathMarker) => self.parse_math_block(),
                 Some(SyntaxKind::BlockQuoteMarker) => self.parse_block_quote(),
-                Some(SyntaxKind::ListMarker) => self.parse_list_item(),
+                Some(SyntaxKind::ListMarker) => self.parse_list(0),
                 Some(SyntaxKind::NEWLINE) if self.is_blank_line() => self.parse_blank_line(),
                 Some(SyntaxKind::WHITESPACE) => {
                     // Skip standalone whitespace
@@ -313,8 +313,51 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
+    fn parse_list(&mut self, indent: usize) {
+        self.builder.start_node(SyntaxKind::List.into());
+
+        while !self.at_eof() {
+            // Count leading whitespace to determine indentation level
+            let mut current_indent = 0;
+            let mut temp_pos = self.pos;
+
+            // Skip any leading whitespace and count it
+            while temp_pos < self.tokens.len()
+                && self.tokens[temp_pos].kind == SyntaxKind::WHITESPACE
+            {
+                current_indent += self.tokens[temp_pos].len;
+                temp_pos += 1;
+            }
+
+            // Check if we have a list marker at the expected indentation
+            if temp_pos < self.tokens.len() && self.tokens[temp_pos].kind == SyntaxKind::ListMarker
+            {
+                if current_indent == indent {
+                    // Same level - parse as list item
+                    self.parse_list_item();
+                } else if current_indent > indent {
+                    // Deeper level - parse as nested list
+                    self.parse_list(current_indent);
+                } else {
+                    // Shallower level - end this list
+                    break;
+                }
+            } else {
+                // No list marker found, end the list
+                break;
+            }
+        }
+
+        self.builder.finish_node();
+    }
+
     fn parse_list_item(&mut self) {
         self.builder.start_node(SyntaxKind::ListItem.into());
+
+        // Consume leading whitespace (indentation)
+        while self.at(SyntaxKind::WHITESPACE) {
+            self.advance();
+        }
 
         // Consume the list marker (-, +, *)
         if self.at(SyntaxKind::ListMarker) {
