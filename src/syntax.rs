@@ -11,6 +11,7 @@ pub enum SyntaxKind {
     DivMarker,        // :::
     MathMarker,       // $$
     FrontmatterDelim, // --- or +++
+    BlockQuoteMarker, // >
 
     // Composite nodes
     ROOT,
@@ -21,6 +22,7 @@ pub enum SyntaxKind {
     MathBlock,
     PARAGRAPH,
     BlankLine,
+    BlockQuote,
 
     // Code block parts
     CodeFenceOpen,

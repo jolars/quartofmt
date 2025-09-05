@@ -95,6 +95,7 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::FenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::MathMarker) => self.parse_math_block(),
+                Some(SyntaxKind::BlockQuoteMarker) => self.parse_block_quote(),
                 Some(SyntaxKind::NEWLINE) if self.is_blank_line() => self.parse_blank_line(),
                 Some(SyntaxKind::WHITESPACE) => {
                     // Skip standalone whitespace
@@ -261,6 +262,52 @@ impl<'a> Parser<'a> {
         // Closing $$
         if self.at(SyntaxKind::MathMarker) {
             self.advance();
+        }
+
+        self.builder.finish_node();
+    }
+
+    fn parse_block_quote(&mut self) {
+        self.builder.start_node(SyntaxKind::BlockQuote.into());
+
+        while !self.at_eof() && self.at(SyntaxKind::BlockQuoteMarker) {
+            // Skip the > marker but don't include it in content
+            let start_pos = self.pos;
+            self.advance(); // consume >
+
+            // Skip optional whitespace after >
+            if self.at(SyntaxKind::WHITESPACE) {
+                self.advance();
+            }
+
+            // Check if this is a blank quote line (just > followed by newline)
+            if self.at(SyntaxKind::NEWLINE) {
+                // This is a blank line in the quote - parse as blank line
+                self.builder.start_node(SyntaxKind::BlankLine.into());
+                self.advance(); // consume newline
+                self.builder.finish_node();
+                continue;
+            }
+
+            // Parse content as a paragraph within the block quote
+            self.builder.start_node(SyntaxKind::PARAGRAPH.into());
+
+            // Collect content until end of line
+            while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+                self.advance();
+            }
+
+            // Consume the newline
+            if self.at(SyntaxKind::NEWLINE) {
+                self.advance();
+            }
+
+            self.builder.finish_node(); // end paragraph
+
+            // Check if next line continues the quote or if we should break
+            if !self.at(SyntaxKind::BlockQuoteMarker) {
+                break;
+            }
         }
 
         self.builder.finish_node();

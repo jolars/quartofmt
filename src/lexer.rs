@@ -142,6 +142,14 @@ impl<'a> Lexer<'a> {
                 })
             }
 
+            '>' => {
+                self.advance();
+                Some(Token {
+                    kind: SyntaxKind::BlockQuoteMarker,
+                    len: 1,
+                })
+            }
+
             _ => {
                 // Regular text - advance until we hit something special
                 let len = self.advance_while(|c| {

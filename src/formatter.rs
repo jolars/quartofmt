@@ -37,6 +37,30 @@ impl Formatter {
                 }
             }
 
+            SyntaxKind::BlockQuote => {
+                // Format children (paragraphs, blank lines) with > prefix
+                for child in node.children() {
+                    match child.kind() {
+                        SyntaxKind::PARAGRAPH => {
+                            let text = child.text().to_string().trim().to_string();
+                            let wrapped = textwrap::fill(&text, self.line_width.saturating_sub(2));
+                            for line in wrapped.lines() {
+                                self.output.push_str("> ");
+                                self.output.push_str(line);
+                                self.output.push('\n');
+                            }
+                        }
+                        SyntaxKind::BlankLine => {
+                            self.output.push_str(">\n");
+                        }
+                        _ => {
+                            // Handle other content within block quotes
+                            self.format_node(&child);
+                        }
+                    }
+                }
+            }
+
             SyntaxKind::PARAGRAPH => {
                 let text = node.text().to_string();
 
