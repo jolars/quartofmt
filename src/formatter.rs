@@ -30,6 +30,10 @@ impl Formatter {
                                 SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {
                                     // Skip these - they'll be handled by proper formatting
                                 }
+                                SyntaxKind::ImageLinkStart | SyntaxKind::LinkStart => {
+                                    // Preserve these as unbreakable units
+                                    self.output.push_str(t.text());
+                                }
                                 _ => self.output.push_str(t.text()),
                             }
                         }
@@ -68,8 +72,20 @@ impl Formatter {
                 let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
 
                 if !normalized.is_empty() {
-                    let wrapped = textwrap::fill(&normalized, self.line_width);
-                    self.output.push_str(&wrapped);
+                    // Create custom line breaking options that prevent breaking at ](
+                    let options = textwrap::Options::new(self.line_width)
+                        .break_words(false)
+                        .word_separator(textwrap::WordSeparator::AsciiSpace)
+                        .word_splitter(textwrap::WordSplitter::NoHyphenation);
+
+                    // Replace ]( with a non-breaking sequence temporarily
+                    let protected = normalized.replace("](", "RIGHTBRACKET_LEFTPAREN");
+
+                    let wrapped = textwrap::fill(&protected, options);
+
+                    // Restore the original syntax
+                    let final_text = wrapped.replace("RIGHTBRACKET_LEFTPAREN", "](");
+                    self.output.push_str(&final_text);
                 }
 
                 // Always end paragraphs with a newline for proper separation

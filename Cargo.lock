@@ -274,6 +274,7 @@ dependencies = [
  "diff",
  "env_logger",
  "log",
+ "regex",
  "rowan",
  "serde",
  "textwrap",

@@ -272,7 +272,6 @@ impl<'a> Parser<'a> {
 
         while !self.at_eof() && self.at(SyntaxKind::BlockQuoteMarker) {
             // Skip the > marker but don't include it in content
-            let start_pos = self.pos;
             self.advance(); // consume >
 
             // Skip optional whitespace after >

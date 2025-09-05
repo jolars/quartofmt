@@ -12,6 +12,8 @@ pub enum SyntaxKind {
     MathMarker,       // $$
     FrontmatterDelim, // --- or +++
     BlockQuoteMarker, // >
+    ImageLinkStart,   // ![
+    LinkStart,        // [
 
     // Composite nodes
     ROOT,
