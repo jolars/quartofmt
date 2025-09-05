@@ -9,6 +9,9 @@ homepage = "https://github.com/jolars/quartofmt"
 keywords = ["quarto", "pandoc", "markdown", "formatter", "pandoc"]
 categories = ["command-line-utilities", "text-processing"]
 
+[workspace]
+members = ["crates/quartofmt-wasm"]
+
 [[bin]]
 name = "quartofmt"
 path = "src/main.rs"

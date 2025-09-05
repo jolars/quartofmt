@@ -37,3 +37,14 @@ tasks:
     desc: Preview documentation site locally
     cmds:
       - cd docs && quarto preview --no-browser
+
+  wasm-build:
+    desc: Build quartofmt-wasm for web playground
+    cmds:
+      - cd crates/quartofmt-wasm && wasm-pack build --target web
+      - cp -r crates/quartofmt-wasm/pkg docs/playground/
+
+  playground-serve:
+    desc: Serve playground locally
+    cmds:
+      - cd docs/playground && python3 -m http.server

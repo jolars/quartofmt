@@ -20,6 +20,6 @@ rsconnect/
 # Generated site
 _site/
 
-*.html
+#*.html
 *_cache
 *_files
