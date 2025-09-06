@@ -265,7 +265,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 input, lexer.pos
             );
         }
-        log::debug!(
+        log::trace!(
             "Token {}: {:?} (len: {})",
             iterations,
             token.kind,
