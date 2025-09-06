@@ -6,6 +6,7 @@ pub struct Parser<'a> {
     input: &'a str,
     tokens: Vec<Token>,
     pos: usize,
+    byte_offset: usize,
     builder: GreenNodeBuilder<'static>,
 }
 
@@ -16,6 +17,7 @@ impl<'a> Parser<'a> {
             input,
             tokens,
             pos: 0,
+            byte_offset: 0,
             builder: GreenNodeBuilder::new(),
         }
     }
@@ -48,21 +50,16 @@ impl<'a> Parser<'a> {
     }
 
     fn advance(&mut self) {
-        if let Some(token) = self.current_token() {
-            let start = self.byte_offset();
-            let end = start + token.len;
-            let text = &self.input[start..end];
-
+        let token_opt = self.current_token().cloned();
+        if let Some(token) = token_opt {
+            let text = &self.input[self.byte_offset..self.byte_offset + token.len];
             log::trace!("Advancing: {:?} = {:?}", token.kind, text);
             self.builder.token(token.kind.into(), text);
+            self.byte_offset += token.len;
             self.pos += 1;
         } else {
             log::trace!("Advance called but no current token");
         }
-    }
-
-    fn byte_offset(&self) -> usize {
-        self.tokens[..self.pos].iter().map(|token| token.len).sum()
     }
 
     fn at(&self, kind: SyntaxKind) -> bool {
