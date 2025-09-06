@@ -253,4 +253,16 @@ mod tests {
         let output = format(input, Some(80));
         assert_eq!(output, input);
     }
+
+    #[test]
+    fn div_paragraph_wrapping() {
+        let input = "::: {.my-div}\nThis is a very long paragraph inside a fenced div that should be wrapped to a shorter width for testing purposes.\n:::\n";
+        let output = format(input, Some(30));
+        // Check that the output starts with the opening fence and contains wrapped lines
+        assert!(output.starts_with("::: {.my-div}\n"));
+        for line in output.lines().skip(1).take(4) {
+            assert!(line.len() <= 30, "Line too long: '{line}'");
+        }
+        assert!(output.ends_with(":::\n"));
+    }
 }
