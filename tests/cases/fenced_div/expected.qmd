@@ -1,0 +1,15 @@
+:::: columns
+
+::: column
+
+Column 1 content
+
+:::
+
+::: column
+
+Columns 2 content
+
+:::
+
+::::

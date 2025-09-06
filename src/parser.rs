@@ -32,6 +32,21 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.pos)
     }
 
+    fn debug_next_few_tokens(&self) {
+        log::debug!("Next few tokens starting at pos {}:", self.pos);
+        for i in 0..5 {
+            if let Some(token) = self.tokens.get(self.pos + i) {
+                let start = self.tokens[..self.pos + i]
+                    .iter()
+                    .map(|t| t.len)
+                    .sum::<usize>();
+                let end = start + token.len;
+                let text = &self.input[start..end];
+                log::debug!("  {}: {:?} = {:?}", self.pos + i, token.kind, text);
+            }
+        }
+    }
+
     fn advance(&mut self) {
         if let Some(token) = self.current_token() {
             let start = self.byte_offset();
@@ -212,35 +227,58 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_fenced_div(&mut self) {
+        log::debug!("Starting parse_fenced_div at pos {}", self.pos);
+        self.debug_next_few_tokens();
+
         self.builder.start_node(SyntaxKind::FencedDiv.into());
 
-        // Opening fence
+        let mut open_len = 0;
         self.builder.start_node(SyntaxKind::DivFenceOpen.into());
-        self.advance(); // div marker (:::)
+        if let Some(token) = self.current_token() {
+            open_len = token.len;
+        }
+        log::debug!(
+            "Starting DivFenceOpen (len {}), current token: {:?}",
+            open_len,
+            self.current_token()
+        );
+        self.advance(); // consume opening DivMarker               
 
-        // Div info (class, attributes)
-        if self.at(SyntaxKind::TEXT) || self.at(SyntaxKind::WHITESPACE) {
-            self.builder.start_node(SyntaxKind::DivInfo.into());
-            while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
-                self.advance();
-            }
-            self.builder.finish_node();
+        // Div info (class, attributes) - capture whitespace and text on same line
+        while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+            log::debug!("Adding to DivFenceOpen: {:?}", self.current_token());
+            self.advance();
         }
 
         if self.at(SyntaxKind::NEWLINE) {
+            log::debug!("Adding newline to DivFenceOpen: {:?}", self.current_token());
             self.advance();
         }
         self.builder.finish_node();
+        log::debug!("Finished DivFenceOpen");
 
-        // Div content
+        // Div content (include nested divs until matching fence length)
         self.builder.start_node(SyntaxKind::DivContent.into());
-        while !self.at_eof() && !self.at(SyntaxKind::DivMarker) {
-            self.advance();
+        while !self.at_eof() {
+            if self.at(SyntaxKind::DivMarker)
+                && self.current_token().is_some_and(|tok| tok.len == open_len)
+            {
+                break;
+            }
+            // Recursively parse document content inside the div
+            let old_pos = self.pos;
+            self.parse_document();
+            if self.pos == old_pos {
+                // Safety: always advance at least one token to avoid infinite loop
+                self.advance();
+            }
         }
         self.builder.finish_node();
 
-        // Closing fence
-        if self.at(SyntaxKind::DivMarker) {
+        // Closing fence matching opening length
+        if self.at(SyntaxKind::DivMarker)
+            && self.current_token().is_some_and(|tok| tok.len == open_len)
+        {
             self.builder.start_node(SyntaxKind::DivFenceClose.into());
             self.advance();
             self.builder.finish_node();

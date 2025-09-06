@@ -246,4 +246,11 @@ mod tests {
         // The link should still be functional
         assert!(output.contains("./example.com/very/long/path/to/file"));
     }
+
+    #[test]
+    fn nested_divs_roundtrip() {
+        let input = ":::: columns\n\n::: column\n\nColumn 1 content\n\n:::\n\n::: column\n\nColumns 2 content\n\n:::\n\n::::\n";
+        let output = format(input, Some(80));
+        assert_eq!(output, input);
+    }
 }

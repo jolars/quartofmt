@@ -135,10 +135,49 @@ impl Formatter {
                 }
             }
 
-            SyntaxKind::CodeBlock
-            | SyntaxKind::FencedDiv
-            | SyntaxKind::MathBlock
-            | SyntaxKind::FRONTMATTER => {
+            SyntaxKind::FencedDiv => {
+                let mut fence_open = None;
+                let mut fence_close = None;
+                let mut div_content = None;
+
+                for child in node.children() {
+                    match child.kind() {
+                        SyntaxKind::DivFenceOpen => {
+                            fence_open = Some(child.text().to_string());
+                        }
+                        SyntaxKind::DivContent => {
+                            div_content = Some(child);
+                        }
+                        SyntaxKind::DivFenceClose => {
+                            fence_close = Some(child.text().to_string());
+                        }
+                        _ => {}
+                    }
+                }
+
+                if let Some(open) = fence_open {
+                    self.output.push_str(&open);
+                }
+                if let Some(content_node) = div_content {
+                    for grandchild in content_node.children() {
+                        if grandchild.kind() == SyntaxKind::DOCUMENT {
+                            for doc_child in grandchild.children() {
+                                self.format_node(&doc_child, indent);
+                            }
+                        } else {
+                            self.format_node(&grandchild, indent);
+                        }
+                    }
+                }
+                if let Some(close) = fence_close {
+                    self.output.push_str(&close);
+                    if !close.ends_with('\n') {
+                        self.output.push('\n');
+                    }
+                }
+            }
+
+            SyntaxKind::CodeBlock | SyntaxKind::MathBlock | SyntaxKind::FRONTMATTER => {
                 // Preserve these blocks as-is
                 let text = node.text().to_string();
                 self.output.push_str(&text);
