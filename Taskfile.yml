@@ -6,6 +6,11 @@ tasks:
     cmds:
       - cargo clippy --all-targets --all-features -- -D warnings
 
+  build-release:
+    desc: Build release version
+    cmds:
+      - cargo build --release
+
   test-debug:
     desc: Run tests with debug logging
     cmds:
