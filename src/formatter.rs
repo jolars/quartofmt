@@ -18,21 +18,24 @@ impl Formatter {
             return String::new();
         }
 
-        // Normalize whitespace: split into words and rejoin with single spaces
-        let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
-
-        // Create custom line breaking options that prevent breaking at ](
+        // Use a more efficient approach for link protection
         let options = textwrap::Options::new(width)
             .break_words(false)
             .word_separator(textwrap::WordSeparator::AsciiSpace)
             .word_splitter(textwrap::WordSplitter::NoHyphenation);
 
-        // Replace ]( with a non-breaking sequence temporarily
-        let protected = normalized.replace("](", "RIGHTBRACKET_LEFTPAREN");
-        let wrapped = textwrap::fill(&protected, options);
+        // Create a custom wrapper that protects ]( sequences
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let normalized = words.join(" ");
 
-        // Restore the original syntax
-        wrapped.replace("RIGHTBRACKET_LEFTPAREN", "](")
+        // Only do replacement if necessary
+        if normalized.contains("](") {
+            let protected = normalized.replace("](", "RIGHTBRACKET_LEFTPAREN");
+            let wrapped = textwrap::fill(&protected, options);
+            wrapped.replace("RIGHTBRACKET_LEFTPAREN", "](")
+        } else {
+            textwrap::fill(&normalized, options)
+        }
     }
 
     pub fn format(mut self, node: &SyntaxNode) -> String {
