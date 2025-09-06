@@ -8,7 +8,7 @@ pub struct Formatter {
 impl Formatter {
     pub fn new(line_width: usize) -> Self {
         Self {
-            output: String::new(),
+            output: String::with_capacity(8192), // Pre-allocate reasonable size
             line_width,
         }
     }
