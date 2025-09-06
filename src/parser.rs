@@ -90,13 +90,16 @@ impl<'a> Parser<'a> {
 
         let mut iterations = 0;
         while !self.at_eof() {
-            iterations += 1;
-            if iterations > 1000 {
-                panic!(
-                    "Too many iterations in parse_document! Current token: {:?} at pos {pos}",
-                    self.current_token(),
-                    pos = self.pos
-                );
+            #[cfg(debug_assertions)]
+            {
+                iterations += 1;
+                if iterations > 1000 {
+                    panic!(
+                        "Too many iterations in parse_document! Current token: {:?} at pos {pos}",
+                        self.current_token(),
+                        pos = self.pos
+                    );
+                }
             }
 
             log::trace!(
