@@ -265,4 +265,19 @@ mod tests {
         }
         assert!(output.ends_with(":::\n"));
     }
+
+    #[test]
+    fn list_items_separate_properly() {
+        let input = "- In R, objects are passed by reference, but when an object is modified a copy\n  is created.\n- For instance, when subsetting a matrix, a copy is created. It's not possible\n  to access for instance a column by reference.\n";
+        let output = format(input, Some(80));
+
+        // Should have two distinct list items
+        let lines: Vec<&str> = output.lines().collect();
+        assert!(lines[0].starts_with("- In R"));
+        assert!(lines[1].starts_with("  is created"));
+        assert!(lines[2].starts_with("- For instance"));
+
+        // Should not merge the list items
+        assert!(!output.contains("is created. - For instance"));
+    }
 }

@@ -407,13 +407,34 @@ impl<'a> Parser<'a> {
             self.advance();
         }
 
-        // Parse the rest of the line as content
-        while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
-            self.advance();
-        }
+        // Parse the content of this list item until we hit a blank line or another list marker
+        while !self.at_eof() {
+            // Check if we've hit a blank line or another list item at the same or shallower level
+            if self.at(SyntaxKind::NEWLINE) && self.is_blank_line() {
+                break;
+            }
 
-        // Consume the newline
-        if self.at(SyntaxKind::NEWLINE) {
+            // Look ahead to see if the next non-whitespace token after a newline is a list marker
+            if self.at(SyntaxKind::NEWLINE) {
+                let mut temp_pos = self.pos + 1;
+
+                // Skip whitespace after the newline
+                while temp_pos < self.tokens.len()
+                    && self.tokens[temp_pos].kind == SyntaxKind::WHITESPACE
+                {
+                    temp_pos += 1;
+                }
+
+                // If we find a list marker, this list item is done
+                if temp_pos < self.tokens.len()
+                    && self.tokens[temp_pos].kind == SyntaxKind::ListMarker
+                {
+                    // Consume the current newline and stop
+                    self.advance();
+                    break;
+                }
+            }
+
             self.advance();
         }
 
