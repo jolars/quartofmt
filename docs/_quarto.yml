@@ -13,6 +13,11 @@ website:
     left:
       - href: index.qmd
         text: Home
+      - href: playground
+        text: Playground
+
+resources:
+  - "playground/**"
 
 format:
   html:
