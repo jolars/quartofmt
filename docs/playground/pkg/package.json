@@ -1,0 +1,15 @@
+{
+  "name": "quartofmt-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "quartofmt_wasm_bg.wasm",
+    "quartofmt_wasm.js",
+    "quartofmt_wasm.d.ts"
+  ],
+  "main": "quartofmt_wasm.js",
+  "types": "quartofmt_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
