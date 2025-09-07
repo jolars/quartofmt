@@ -48,6 +48,7 @@ tasks:
     cmds:
       - cd crates/quartofmt-wasm && wasm-pack build --target web
       - cp -r crates/quartofmt-wasm/pkg docs/playground/
+      - rm -rf docs/playground/pkg/.gitignore 
 
   playground-serve:
     desc: Serve playground locally

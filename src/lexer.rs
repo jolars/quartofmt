@@ -35,12 +35,38 @@ impl<'a> Lexer<'a> {
 
     fn is_list_marker(&self) -> bool {
         // Check if this is a list marker (-, +, *) followed by space
-        if let Some(ch) = self.current_char() {
-            if matches!(ch, '-' | '+' | '*') {
-                return self.peek_char(1) == Some(' ');
-            }
+        if let Some(ch) = self.current_char()
+            && matches!(ch, '-' | '+' | '*')
+        {
+            return self.peek_char(1) == Some(' ');
         }
         false
+    }
+
+    fn is_numbered_list_marker(&self) -> bool {
+        // Check if this is a numbered list marker (digit(s) followed by . and space)
+        let mut offset = 0;
+
+        // Must start with a digit
+        if let Some(ch) = self.peek_char(offset) {
+            if !ch.is_ascii_digit() {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        // Continue while we have digits
+        while let Some(ch) = self.peek_char(offset) {
+            if ch.is_ascii_digit() {
+                offset += 1;
+            } else {
+                break;
+            }
+        }
+
+        // Must be followed by . and space
+        self.peek_char(offset) == Some('.') && self.peek_char(offset + 1) == Some(' ')
     }
 
     pub fn advance_while<F>(&mut self, mut predicate: F) -> usize
@@ -185,6 +211,28 @@ impl<'a> Lexer<'a> {
                 })
             }
 
+            '0'..='9' if self.is_numbered_list_marker() => {
+                let mut len = 0;
+                // Consume digits
+                while let Some(ch) = self.current_char() {
+                    if ch.is_ascii_digit() {
+                        self.advance();
+                        len += 1;
+                    } else {
+                        break;
+                    }
+                }
+                // Consume the dot
+                if self.current_char() == Some('.') {
+                    self.advance();
+                    len += 1;
+                }
+                Some(Token {
+                    kind: SyntaxKind::ListMarker,
+                    len,
+                })
+            }
+
             '-' if self.starts_with("---") => {
                 let len = self.advance_while(|c| c == '-');
                 // Only treat as frontmatter delimiter if it's exactly 3 or more dashes
@@ -208,6 +256,13 @@ impl<'a> Lexer<'a> {
                 if ch == '!' && self.peek_char(1) == Some('[') {
                     // This will be handled by the ![  case above, but if we get here
                     // just advance one character to avoid infinite loop
+                    self.advance();
+                    Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len: 1,
+                    })
+                } else if ch.is_ascii_digit() && self.is_numbered_list_marker() {
+                    // This will be handled by the numbered list case above
                     self.advance();
                     Some(Token {
                         kind: SyntaxKind::TEXT,
