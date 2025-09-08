@@ -51,13 +51,22 @@ impl Formatter {
                         rowan::NodeOrToken::Node(n) => self.format_node(&n, indent),
                         rowan::NodeOrToken::Token(t) => match t.kind() {
                             SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {}
-                            SyntaxKind::ImageLinkStart | SyntaxKind::LinkStart => {
+                            SyntaxKind::ImageLinkStart
+                            | SyntaxKind::LinkStart
+                            | SyntaxKind::LatexCommand => {
                                 self.output.push_str(t.text());
                             }
                             _ => self.output.push_str(t.text()),
                         },
                     }
                 }
+            }
+
+            SyntaxKind::LatexCommand => {
+                // Standalone LaTeX commands - preserve exactly as written
+                let text = node.text().to_string();
+                self.output.push_str(&text);
+                // Don't add extra newlines for standalone LaTeX commands
             }
 
             SyntaxKind::BlockQuote => {
@@ -184,7 +193,7 @@ impl Formatter {
                 // Preserve these blocks as-is
                 let text = node.text().to_string();
                 self.output.push_str(&text);
-                // Ensure code blocks end with a newline for proper separation
+                // Ensure these blocks end with appropriate spacing
                 if !text.ends_with('\n') {
                     self.output.push('\n');
                 }

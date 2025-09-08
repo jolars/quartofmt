@@ -110,6 +110,10 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::FenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::MathMarker) => self.parse_math_block(),
+                Some(SyntaxKind::LatexCommand) if self.is_standalone_latex_command() => {
+                    log::debug!("Parsing standalone LaTeX command");
+                    self.parse_standalone_latex_command()
+                }
                 Some(SyntaxKind::BlockQuoteMarker) => self.parse_block_quote(),
                 Some(SyntaxKind::ListMarker) => self.parse_list(0),
                 Some(SyntaxKind::NEWLINE) if self.is_blank_line() => self.parse_blank_line(),
@@ -482,6 +486,14 @@ impl<'a> Parser<'a> {
                     );
                     self.advance();
                 }
+                Some(SyntaxKind::LatexCommand) => {
+                    log::debug!("LaTeX command in paragraph");
+                    log::trace!(
+                        "Paragraph iteration {iterations}: advancing latex command {:?}",
+                        self.current_token()
+                    );
+                    self.advance();
+                }
                 _ => {
                     log::trace!(
                         "Paragraph iteration {iterations}: advancing other token {:?}",
@@ -510,6 +522,50 @@ impl<'a> Parser<'a> {
             self.advance();
         }
         self.builder.finish_node();
+    }
+
+    fn parse_standalone_latex_command(&mut self) {
+        // Consume any leading whitespace (indentation)
+        while self.at(SyntaxKind::WHITESPACE) {
+            self.advance();
+        }
+
+        // Parse the LaTeX command including its trailing newline as one unit
+        self.builder.start_node(SyntaxKind::LatexCommand.into());
+        self.advance(); // consume the latex command token
+        if self.at(SyntaxKind::NEWLINE) {
+            self.advance(); // include the trailing newline in the command node
+        }
+        self.builder.finish_node();
+    }
+
+    fn is_standalone_latex_command(&self) -> bool {
+        // Check if the current LaTeX command is on its own line
+        if !self.at(SyntaxKind::LatexCommand) {
+            return false;
+        }
+
+        // Look backwards to see if there's any non-whitespace content before this on the line
+        let mut i = self.pos;
+        while i > 0 {
+            match self.tokens[i - 1].kind {
+                SyntaxKind::WHITESPACE => i -= 1,
+                SyntaxKind::NEWLINE => break, // Found start of line
+                _ => return false,            // Found other content on this line
+            }
+        }
+
+        // Look forwards to see if there's any non-whitespace content after this on the line
+        let mut j = self.pos + 1;
+        while j < self.tokens.len() {
+            match self.tokens[j].kind {
+                SyntaxKind::WHITESPACE => j += 1,
+                SyntaxKind::NEWLINE => break, // Found end of line
+                _ => return false,            // Found other content on this line
+            }
+        }
+
+        true
     }
 
     fn is_blank_line(&self) -> bool {

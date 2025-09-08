@@ -11,6 +11,7 @@ pub enum SyntaxKind {
     DivMarker,        // :::
     MathMarker,       // $$
     FrontmatterDelim, // --- or +++
+    LatexCommand,     // \command{...}
     BlockQuoteMarker, // >
     ImageLinkStart,   // ![
     LinkStart,        // [
