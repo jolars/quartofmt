@@ -47,8 +47,6 @@ fn start_dir_for(input_path: &Option<PathBuf>) -> io::Result<PathBuf> {
 }
 
 fn main() -> io::Result<()> {
-    env_logger::init();
-
     let cli = Cli::parse();
 
     let start_dir = start_dir_for(&cli.file)?;
