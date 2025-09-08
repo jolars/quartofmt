@@ -122,67 +122,67 @@ impl<'a> Lexer<'a> {
 
             '\\' => {
                 // Check if this is a LaTeX command
-                if let Some(next_ch) = self.peek_char(1) {
-                    if next_ch.is_ascii_alphabetic() {
-                        // This is a LaTeX command like \command
-                        let start_pos = self.pos;
-                        self.advance(); // consume \
+                if let Some(next_ch) = self.peek_char(1)
+                    && next_ch.is_ascii_alphabetic()
+                {
+                    // This is a LaTeX command like \command
+                    let start_pos = self.pos;
+                    self.advance(); // consume \
 
-                        // Consume command name (alphabetic characters)
-                        while let Some(ch) = self.current_char() {
-                            if ch.is_ascii_alphabetic() {
-                                self.advance();
-                            } else {
-                                break;
-                            }
+                    // Consume command name (alphabetic characters)
+                    while let Some(ch) = self.current_char() {
+                        if ch.is_ascii_alphabetic() {
+                            self.advance();
+                        } else {
+                            break;
                         }
-
-                        // Consume optional square bracket arguments [...]
-                        while let Some(ch) = self.current_char() {
-                            if ch == '[' {
-                                let mut bracket_count = 0;
-                                while let Some(ch) = self.current_char() {
-                                    self.advance();
-                                    if ch == '[' {
-                                        bracket_count += 1;
-                                    } else if ch == ']' {
-                                        bracket_count -= 1;
-                                        if bracket_count == 0 {
-                                            break;
-                                        }
-                                    }
-                                }
-                            } else {
-                                break;
-                            }
-                        }
-
-                        // Consume any arguments in braces {...}
-                        while let Some(ch) = self.current_char() {
-                            if ch == '{' {
-                                let mut brace_count = 0;
-                                while let Some(ch) = self.current_char() {
-                                    self.advance();
-                                    if ch == '{' {
-                                        brace_count += 1;
-                                    } else if ch == '}' {
-                                        brace_count -= 1;
-                                        if brace_count == 0 {
-                                            break;
-                                        }
-                                    }
-                                }
-                            } else {
-                                break;
-                            }
-                        }
-
-                        let len = self.pos - start_pos;
-                        return Some(Token {
-                            kind: SyntaxKind::LatexCommand,
-                            len,
-                        });
                     }
+
+                    // Consume optional square bracket arguments [...]
+                    while let Some(ch) = self.current_char() {
+                        if ch == '[' {
+                            let mut bracket_count = 0;
+                            while let Some(ch) = self.current_char() {
+                                self.advance();
+                                if ch == '[' {
+                                    bracket_count += 1;
+                                } else if ch == ']' {
+                                    bracket_count -= 1;
+                                    if bracket_count == 0 {
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Consume any arguments in braces {...}
+                    while let Some(ch) = self.current_char() {
+                        if ch == '{' {
+                            let mut brace_count = 0;
+                            while let Some(ch) = self.current_char() {
+                                self.advance();
+                                if ch == '{' {
+                                    brace_count += 1;
+                                } else if ch == '}' {
+                                    brace_count -= 1;
+                                    if brace_count == 0 {
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+
+                    let len = self.pos - start_pos;
+                    return Some(Token {
+                        kind: SyntaxKind::LatexCommand,
+                        len,
+                    });
                 }
 
                 // Not a LaTeX command, treat as regular text
