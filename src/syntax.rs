@@ -34,6 +34,9 @@ pub enum SyntaxKind {
     ListItem,
     Comment,
 
+    // Tables
+    SimpleTable,
+
     // Code block parts
     CodeFenceOpen,
     CodeFenceClose,

@@ -106,6 +106,12 @@ impl<'a> Parser<'a> {
             );
 
             let old_pos = self.pos;
+
+            if self.is_simple_table_start() {
+                self.parse_simple_table();
+                continue;
+            }
+
             match self.current_token().map(|t| t.kind) {
                 Some(SyntaxKind::FenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
@@ -572,6 +578,112 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
+    fn is_simple_table_start(&self) -> bool {
+        // Save current position
+        let mut pos = self.pos;
+        // 1. First line: TEXT or WHITESPACE, then NEWLINE
+        let mut saw_text = false;
+        while pos < self.tokens.len() {
+            match self.tokens[pos].kind {
+                SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
+                    saw_text = true;
+                    pos += 1;
+                }
+                SyntaxKind::NEWLINE => {
+                    pos += 1;
+                    break;
+                }
+                _ => return false,
+            }
+        }
+        if !saw_text {
+            return false;
+        }
+        // 2. Second line: dashes (TEXT token containing only - and spaces), then NEWLINE
+        let mut saw_dash = false;
+        while pos < self.tokens.len() {
+            match self.tokens[pos].kind {
+                SyntaxKind::TEXT => {
+                    let start = token_offset(&self.tokens, pos);
+                    let end = start + self.tokens[pos].len;
+                    let text = &self.input[start..end];
+
+                    log::debug!("SimpleTable candidate line {pos}: {text}");
+
+                    if text.trim().chars().all(|c| c == '-' || c == ' ') {
+                        saw_dash = true;
+                        pos += 1;
+                    } else {
+                        return false;
+                    }
+                }
+                SyntaxKind::WHITESPACE => {
+                    pos += 1;
+                }
+                SyntaxKind::NEWLINE => {
+                    pos += 1;
+                    break;
+                }
+                _ => return false,
+            }
+        }
+        if !saw_dash {
+            return false;
+        }
+        // 3. Third line: TEXT or WHITESPACE, then NEWLINE (at least one row)
+        let mut saw_row = false;
+        while pos < self.tokens.len() {
+            match self.tokens[pos].kind {
+                SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
+                    saw_row = true;
+                    pos += 1;
+                }
+                SyntaxKind::NEWLINE => {
+                    break;
+                }
+                _ => return false,
+            }
+        }
+        saw_row
+    }
+
+    fn parse_simple_table(&mut self) {
+        self.builder.start_node(SyntaxKind::SimpleTable.into());
+        // Parse lines until we hit a blank line or a non-table line
+        let mut _line_count = 0;
+        while !self.at_eof() {
+            // Stop on blank line or if not TEXT/WHITESPACE/NEWLINE
+            let mut temp_pos = self.pos;
+            let mut saw_content = false;
+            while temp_pos < self.tokens.len() {
+                match self.tokens[temp_pos].kind {
+                    SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
+                        saw_content = true;
+                        temp_pos += 1;
+                    }
+                    SyntaxKind::NEWLINE => {
+                        temp_pos += 1;
+                        break;
+                    }
+                    _ => break,
+                }
+            }
+            if !saw_content {
+                break;
+            }
+            // Consume this line, logging each token's text
+            while self.pos < temp_pos {
+                let start = token_offset(&self.tokens, self.pos);
+                let end = start + self.tokens[self.pos].len;
+                let text = &self.input[start..end];
+                log::debug!("SimpleTable line token {}: {:?}", self.pos, text);
+                self.advance();
+            }
+            _line_count += 1;
+        }
+        self.builder.finish_node();
+    }
+
     fn parse_standalone_latex_command(&mut self) {
         // Consume any leading whitespace (indentation)
         while self.at(SyntaxKind::WHITESPACE) {
@@ -659,4 +771,8 @@ impl<'a> Parser<'a> {
 
 pub fn parse(input: &str) -> SyntaxNode {
     Parser::new(input).parse()
+}
+
+pub fn token_offset(tokens: &[Token], idx: usize) -> usize {
+    tokens[..idx].iter().map(|t| t.len).sum()
 }

@@ -225,20 +225,21 @@ impl<'a> Lexer<'a> {
                 })
             }
 
-            '-' if self.starts_with("---") => {
-                let len = self.advance_while(|c| c == '-');
-                // Only treat as frontmatter delimiter if it's exactly 3 or more dashes
-                if len >= 3 {
+            '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {
+                let start_pos = self.pos;
+                let ch = self.current_char().unwrap();
+                let len = self.advance_while(|c| c == ch);
+                let is_start_of_file = start_pos == 0;
+                let is_after_newline = start_pos > 0 && self.input[..start_pos].ends_with('\n');
+                if (is_start_of_file || is_after_newline) && len == 3 {
                     Some(Token {
                         kind: SyntaxKind::FrontmatterDelim,
                         len,
                     })
                 } else {
-                    // This shouldn't happen since we check starts_with("---")
-                    // but let's handle it safely
                     Some(Token {
                         kind: SyntaxKind::TEXT,
-                        len: 1,
+                        len,
                     })
                 }
             }
@@ -278,14 +279,6 @@ impl<'a> Lexer<'a> {
                 Some(Token {
                     kind: SyntaxKind::LinkStart,
                     len: 1,
-                })
-            }
-
-            '+' if self.starts_with("+++") => {
-                let len = self.advance_while(|c| c == '+');
-                Some(Token {
-                    kind: SyntaxKind::FrontmatterDelim,
-                    len,
                 })
             }
 
@@ -345,24 +338,6 @@ impl<'a> Lexer<'a> {
                     kind: SyntaxKind::ListMarker,
                     len,
                 })
-            }
-
-            '-' if self.starts_with("---") => {
-                let len = self.advance_while(|c| c == '-');
-                // Only treat as frontmatter delimiter if it's exactly 3 or more dashes
-                if len >= 3 {
-                    Some(Token {
-                        kind: SyntaxKind::FrontmatterDelim,
-                        len,
-                    })
-                } else {
-                    // This shouldn't happen since we check starts_with("---")
-                    // but let's handle it safely
-                    Some(Token {
-                        kind: SyntaxKind::TEXT,
-                        len: 1,
-                    })
-                }
             }
 
             _ => {
