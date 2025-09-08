@@ -16,6 +16,8 @@ pub enum SyntaxKind {
     ImageLinkStart,   // ![
     LinkStart,        // [
     ListMarker,       // - + *
+    CommentStart,     // <!--
+    CommentEnd,       // -->
 
     // Composite nodes
     ROOT,
@@ -29,6 +31,7 @@ pub enum SyntaxKind {
     BlockQuote,
     List,
     ListItem,
+    Comment,
 
     // Code block parts
     CodeFenceOpen,

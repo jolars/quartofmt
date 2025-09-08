@@ -243,6 +243,27 @@ impl<'a> Lexer<'a> {
                 }
             }
 
+            '<' if self.starts_with("<!--") => {
+                self.advance(); // consume <
+                self.advance(); // consume !
+                self.advance(); // consume -
+                self.advance(); // consume -
+                Some(Token {
+                    kind: SyntaxKind::CommentStart,
+                    len: 4,
+                })
+            }
+
+            '>' if self.starts_with("-->") => {
+                self.advance(); // consume -
+                self.advance(); // consume -
+                self.advance(); // consume >
+                Some(Token {
+                    kind: SyntaxKind::CommentEnd,
+                    len: 3,
+                })
+            }
+
             '!' if self.starts_with("![") => {
                 self.advance(); // consume !
                 self.advance(); // consume [

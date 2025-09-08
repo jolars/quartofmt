@@ -110,6 +110,7 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::FenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::MathMarker) => self.parse_math_block(),
+                Some(SyntaxKind::CommentStart) => self.parse_comment(),
                 Some(SyntaxKind::LatexCommand) if self.is_standalone_latex_command() => {
                     log::debug!("Parsing standalone LaTeX command");
                     self.parse_standalone_latex_command()
@@ -291,6 +292,29 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
+    fn parse_comment(&mut self) {
+        self.builder.start_node(SyntaxKind::Comment.into());
+
+        // Opening <!--
+        if self.at(SyntaxKind::CommentStart) {
+            self.advance();
+        } else {
+            panic!("Expected CommentStart at beginning of parse_comment");
+        }
+
+        // Content until closing -->
+        while !self.at_eof() && !self.at(SyntaxKind::CommentEnd) {
+            self.advance();
+        }
+
+        // Closing -->
+        if self.at(SyntaxKind::CommentEnd) {
+            self.advance();
+        }
+
+        self.builder.finish_node();
+    }
+
     fn parse_math_block(&mut self) {
         self.builder.start_node(SyntaxKind::MathBlock.into());
 
@@ -467,18 +491,27 @@ impl<'a> Parser<'a> {
                     log::trace!("Breaking paragraph on blank line");
                     break;
                 }
+
+                Some(SyntaxKind::CommentStart) => {
+                    // End paragraph, parse comment separately
+                    break;
+                }
+
                 Some(SyntaxKind::FenceMarker | SyntaxKind::DivMarker | SyntaxKind::MathMarker) => {
                     log::trace!("Breaking paragraph on fence/div/math marker");
                     break;
                 }
+
                 Some(SyntaxKind::WHITESPACE) => {
                     log::trace!("Paragraph iteration {iterations}: advancing whitespace");
                     self.advance();
                 }
+
                 Some(SyntaxKind::NEWLINE) => {
                     log::trace!("Paragraph iteration {iterations}: advancing newline");
                     self.advance();
                 }
+
                 Some(SyntaxKind::TEXT) => {
                     log::trace!(
                         "Paragraph iteration {iterations}: advancing text {:?}",
@@ -486,6 +519,7 @@ impl<'a> Parser<'a> {
                     );
                     self.advance();
                 }
+
                 Some(SyntaxKind::LatexCommand) => {
                     log::debug!("LaTeX command in paragraph");
                     log::trace!(
@@ -494,6 +528,7 @@ impl<'a> Parser<'a> {
                     );
                     self.advance();
                 }
+
                 _ => {
                     log::trace!(
                         "Paragraph iteration {iterations}: advancing other token {:?}",

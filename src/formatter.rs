@@ -62,6 +62,14 @@ impl Formatter {
                 }
             }
 
+            SyntaxKind::Comment => {
+                let text = node.text().to_string();
+                self.output.push_str(&text);
+                if !text.ends_with('\n') {
+                    self.output.push('\n');
+                }
+            }
+
             SyntaxKind::LatexCommand => {
                 // Standalone LaTeX commands - preserve exactly as written
                 let text = node.text().to_string();
