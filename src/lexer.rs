@@ -305,6 +305,25 @@ impl<'a> Lexer<'a> {
                 })
             }
 
+            '{' if self.starts_with("{#") => {
+                // General label: {#...}
+                let start_pos = self.pos;
+                self.advance(); // consume {
+                self.advance(); // consume #
+                // Consume until we hit }
+                while let Some(c) = self.current_char() {
+                    self.advance();
+                    if c == '}' {
+                        break;
+                    }
+                }
+                let len = self.pos - start_pos;
+                return Some(Token {
+                    kind: SyntaxKind::Label,
+                    len,
+                });
+            }
+
             '0'..='9' if self.is_numbered_list_marker() => {
                 let mut len = 0;
                 // Consume digits

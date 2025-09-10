@@ -18,6 +18,7 @@ pub enum SyntaxKind {
     ListMarker,       // - + *
     CommentStart,     // <!--
     CommentEnd,       // -->
+    Label,            // {#label} for headings, math, etc.
 
     // Composite nodes
     ROOT,

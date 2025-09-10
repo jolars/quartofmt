@@ -329,6 +329,19 @@ impl<'a> Parser<'a> {
         // Closing $$
         if self.at(SyntaxKind::MathMarker) {
             self.advance();
+            // Attach Label if present
+            if self.at(SyntaxKind::WHITESPACE) {
+                self.advance();
+            }
+            if self.at(SyntaxKind::Label) {
+                self.builder.start_node(SyntaxKind::Label.into());
+                self.advance();
+                self.builder.finish_node();
+            }
+            // Consume trailing newline
+            if self.at(SyntaxKind::NEWLINE) {
+                self.advance();
+            }
         }
 
         self.builder.finish_node();
