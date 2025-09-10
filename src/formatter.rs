@@ -18,24 +18,15 @@ impl Formatter {
             return String::new();
         }
 
-        // Use a more efficient approach for link protection
         let options = textwrap::Options::new(width)
             .break_words(false)
             .word_separator(textwrap::WordSeparator::AsciiSpace)
             .word_splitter(textwrap::WordSplitter::NoHyphenation);
 
-        // Create a custom wrapper that protects ]( sequences
         let words: Vec<&str> = text.split_whitespace().collect();
         let normalized = words.join(" ");
 
-        // Only do replacement if necessary
-        if normalized.contains("](") {
-            let protected = normalized.replace("](", "RIGHTBRACKET_LEFTPAREN");
-            let wrapped = textwrap::fill(&protected, options);
-            wrapped.replace("RIGHTBRACKET_LEFTPAREN", "](")
-        } else {
-            textwrap::fill(&normalized, options)
-        }
+        textwrap::fill(&normalized, options)
     }
 
     pub fn format(mut self, node: &SyntaxNode) -> String {
