@@ -318,10 +318,11 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 let len = self.pos - start_pos;
-                return Some(Token {
+
+                Some(Token {
                     kind: SyntaxKind::Label,
                     len,
-                });
+                })
             }
 
             '0'..='9' if self.is_numbered_list_marker() => {
