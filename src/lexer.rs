@@ -482,13 +482,13 @@ fn lexer_math_block_tokens() {
     assert_eq!(
         kinds,
         vec![
-            SyntaxKind::BlockMathMarker,   // $$
+            SyntaxKind::BlockMathMarker, // $$
             SyntaxKind::NEWLINE,
-            SyntaxKind::TEXT,         // f(x) = x^2
+            SyntaxKind::TEXT, // f(x) = x^2
             SyntaxKind::NEWLINE,
-            SyntaxKind::BlockMathMarker,   // $$
+            SyntaxKind::BlockMathMarker, // $$
             SyntaxKind::WHITESPACE,
-            SyntaxKind::Label,        // {#eq:foobar}
+            SyntaxKind::Label, // {#eq:foobar}
             SyntaxKind::NEWLINE,
         ]
     );
@@ -502,17 +502,17 @@ fn lexer_inline_math_tokens() {
     assert_eq!(
         kinds,
         vec![
-            SyntaxKind::TEXT,         // This
+            SyntaxKind::TEXT, // This
             SyntaxKind::WHITESPACE,
-            SyntaxKind::TEXT,         // is
+            SyntaxKind::TEXT, // is
             SyntaxKind::WHITESPACE,
-            SyntaxKind::InlineMathMarker,   // $
-            SyntaxKind::TEXT,         // x^2
-            SyntaxKind::InlineMathMarker,   // $
+            SyntaxKind::InlineMathMarker, // $
+            SyntaxKind::TEXT,             // x^2
+            SyntaxKind::InlineMathMarker, // $
             SyntaxKind::WHITESPACE,
-            SyntaxKind::TEXT,         // inline
+            SyntaxKind::TEXT, // inline
             SyntaxKind::WHITESPACE,
-            SyntaxKind::TEXT,         // math.
+            SyntaxKind::TEXT, // math.
         ]
     );
 }

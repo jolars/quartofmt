@@ -556,7 +556,9 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
-                Some(SyntaxKind::FenceMarker | SyntaxKind::DivMarker | SyntaxKind::BlockMathMarker) => {
+                Some(
+                    SyntaxKind::FenceMarker | SyntaxKind::DivMarker | SyntaxKind::BlockMathMarker,
+                ) => {
                     log::trace!("Breaking paragraph on fence/div/math marker");
                     break;
                 }
