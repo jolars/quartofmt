@@ -818,3 +818,28 @@ pub fn parse(input: &str) -> SyntaxNode {
 pub fn token_offset(tokens: &[Token], idx: usize) -> usize {
     tokens[..idx].iter().map(|t| t.len).sum()
 }
+
+#[test]
+fn parser_math_block_structure() {
+    let input = "$$\nf(x) = x^2\n$$ {#eq:foobar}\n";
+    let tree = crate::parser::parse(input);
+    let root = tree;
+    let document = root
+        .children()
+        .find(|n| n.kind() == SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+    let math_block = document
+        .children()
+        .find(|n| n.kind() == SyntaxKind::MathBlock)
+        .expect("MathBlock node");
+    let children: Vec<_> = math_block.children().map(|n| n.kind()).collect();
+    assert_eq!(
+        children,
+        vec![
+            SyntaxKind::BlockMathMarker,
+            SyntaxKind::MathContent,
+            SyntaxKind::BlockMathMarker,
+            SyntaxKind::Label,
+        ]
+    );
+}
