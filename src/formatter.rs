@@ -135,6 +135,12 @@ impl Formatter {
                 // }
             }
 
+            SyntaxKind::InlineMath => {
+                for child in node.children() {
+                    self.output.push_str(&child.text().to_string());
+                }
+            }
+
             SyntaxKind::ListItem => {
                 let node_text = node.text().to_string();
                 let local_indent = node_text.chars().take_while(|c| c.is_whitespace()).count();

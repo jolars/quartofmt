@@ -20,7 +20,8 @@ pub enum SyntaxKind {
 
     // Math
     InlineMathMarker, // $
-    BlockMathMarker, // $$
+    BlockMathMarker,  // $$
+    InlineMath,
     MathBlock,
     MathContent,
 
