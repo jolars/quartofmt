@@ -473,3 +473,23 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     log::debug!("Tokenization complete. {} tokens generated.", tokens.len());
     tokens
 }
+
+#[test]
+fn lexer_math_block_tokens() {
+    let input = "$$\nf(x)=x^2\n$$ {#eq:foobar}\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    assert_eq!(
+        kinds,
+        vec![
+            SyntaxKind::MathMarker,   // $$
+            SyntaxKind::NEWLINE,
+            SyntaxKind::TEXT,         // f(x) = x^2
+            SyntaxKind::NEWLINE,
+            SyntaxKind::MathMarker,   // $$
+            SyntaxKind::WHITESPACE,
+            SyntaxKind::Label,        // {#eq:foobar}
+            SyntaxKind::NEWLINE,
+        ]
+    );
+}
