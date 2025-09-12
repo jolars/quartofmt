@@ -21,6 +21,8 @@ pub enum SyntaxKind {
     // Math
     InlineMath, // $
     MathMarker, // $$
+    MathBlock,
+    MathContent,
 
     // Composite nodes
     ROOT,
@@ -28,7 +30,6 @@ pub enum SyntaxKind {
     FRONTMATTER,
     CodeBlock,
     FencedDiv,
-    MathBlock,
     PARAGRAPH,
     BlankLine,
     BlockQuote,

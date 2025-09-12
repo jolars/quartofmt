@@ -218,53 +218,37 @@ impl Formatter {
             }
 
             SyntaxKind::MathBlock => {
-                let text = node.text().to_string();
-                let trimmed = text.trim();
-
-                // Detect single-line math block: $$...$$
-                if trimmed.starts_with("$$") && trimmed.ends_with("$$") && !trimmed.contains('\n') {
-                    self.output.push_str("$$\n");
-                    let math_content = trimmed
-                        .trim_start_matches("$$")
-                        .trim_end_matches("$$")
-                        .trim();
-                    self.output.push_str(math_content);
-                    self.output.push('\n');
-                    self.output.push_str("$$\n");
-                } else {
-                    let lines: Vec<&str> = text.lines().collect();
-                    // Compute minimum indentation of all non-empty, non-fence, non-label lines
-                    let min_indent = lines
-                        .iter()
-                        .filter(|line| {
-                            let l = line.trim();
-                            !l.is_empty()
-                                && l != "$$"
-                                && !l.starts_with("$$")
-                                && !l.starts_with("{#")
-                        })
-                        .map(|line| line.chars().take_while(|c| c.is_whitespace()).count())
-                        .min()
-                        .unwrap_or(0);
-
-                    for line in lines {
-                        // Remove min_indent from content lines, leave fence/label lines unchanged
-                        let trimmed = if line.trim() == "$$"
-                            || line.trim().starts_with("$$")
-                            || line.trim().starts_with("{#")
-                        {
-                            line
-                        } else if line.len() >= min_indent {
-                            &line[min_indent..]
-                        } else {
-                            line
-                        };
-                        // Add math_indent spaces to each line
+                let mut label = None;
+                let mut math_content = None;
+                for child in node.children() {
+                    match child.kind() {
+                        SyntaxKind::MathContent => {
+                            math_content = Some(child.text().to_string());
+                        }
+                        SyntaxKind::Label => {
+                            label = Some(child.text().to_string().trim().to_string());
+                        }
+                        _ => {}
+                    }
+                }
+                // Opening fence
+                self.output.push_str("$$\n");
+                // Math content
+                if let Some(content) = math_content {
+                    let math_indent = self.config.math_indent.unwrap();
+                    for line in content.trim().lines() {
                         self.output.push_str(&" ".repeat(math_indent));
-                        self.output.push_str(trimmed);
+                        self.output.push_str(line.trim_end());
                         self.output.push('\n');
                     }
                 }
+                // Closing fence (with label if present)
+                self.output.push_str("$$");
+                if let Some(lbl) = label {
+                    self.output.push(' ');
+                    self.output.push_str(&lbl);
+                }
+                self.output.push('\n');
             }
 
             SyntaxKind::CodeBlock | SyntaxKind::FRONTMATTER => {

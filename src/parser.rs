@@ -367,29 +367,41 @@ impl<'a> Parser<'a> {
         self.builder.start_node(SyntaxKind::MathBlock.into());
 
         // Opening $$
-        self.advance(); // consume opening $$
+        if self.at(SyntaxKind::MathMarker) {
+            self.builder.start_node(SyntaxKind::MathMarker.into());
+            self.advance();
+            self.builder.finish_node();
+        }
 
-        // Content until closing $$
+        // Math content (until closing $$)
+        self.builder.start_node(SyntaxKind::MathContent.into());
         while !self.at_eof() && !self.at(SyntaxKind::MathMarker) {
             self.advance();
         }
+        self.builder.finish_node();
 
         // Closing $$
         if self.at(SyntaxKind::MathMarker) {
+            self.builder.start_node(SyntaxKind::MathMarker.into());
             self.advance();
-            // Attach Label if present
-            if self.at(SyntaxKind::WHITESPACE) {
-                self.advance();
-            }
-            if self.at(SyntaxKind::Label) {
-                self.builder.start_node(SyntaxKind::Label.into());
-                self.advance();
-                self.builder.finish_node();
-            }
-            // Consume trailing newline
-            if self.at(SyntaxKind::NEWLINE) {
-                self.advance();
-            }
+            self.builder.finish_node();
+        }
+
+        // Optional whitespace
+        if self.at(SyntaxKind::WHITESPACE) {
+            self.advance();
+        }
+
+        // Optional label
+        if self.at(SyntaxKind::Label) {
+            self.builder.start_node(SyntaxKind::Label.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+
+        // Trailing newline
+        if self.at(SyntaxKind::NEWLINE) {
+            self.advance();
         }
 
         self.builder.finish_node();
