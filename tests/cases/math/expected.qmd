@@ -5,3 +5,8 @@ $$ {#eq:foobar}
 $$
 \mathrm{E}=mc^2
 $$
+
+An equation in a sentence:
+$$
+E=mc^2.
+$$
