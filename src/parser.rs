@@ -115,7 +115,7 @@ impl<'a> Parser<'a> {
             match self.current_token().map(|t| t.kind) {
                 Some(SyntaxKind::FenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
-                Some(SyntaxKind::MathMarker) => self.parse_math_block(),
+                Some(SyntaxKind::MathMarker) => self.parse_block_math(),
                 Some(SyntaxKind::CommentStart) => self.parse_comment(),
                 Some(SyntaxKind::LatexCommand) if self.is_standalone_latex_command() => {
                     log::debug!("Parsing standalone LaTeX command");
@@ -349,7 +349,21 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
-    fn parse_math_block(&mut self) {
+    fn parse_inline_math(&mut self) {
+        self.builder.start_node(SyntaxKind::InlineMath.into());
+        self.advance(); // consume opening $ or $$
+        while !self.at_eof() && !self.at(SyntaxKind::InlineMath) && !self.at(SyntaxKind::MathMarker)
+        {
+            self.advance();
+        }
+        // Closing $ or $$
+        if self.at(SyntaxKind::InlineMath) || self.at(SyntaxKind::MathMarker) {
+            self.advance();
+        }
+        self.builder.finish_node();
+    }
+
+    fn parse_block_math(&mut self) {
         self.builder.start_node(SyntaxKind::MathBlock.into());
 
         // Opening $$

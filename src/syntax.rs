@@ -9,7 +9,6 @@ pub enum SyntaxKind {
     TEXT,
     FenceMarker,      // ``` or ~~~
     DivMarker,        // :::
-    MathMarker,       // $$
     FrontmatterDelim, // --- or +++
     BlockQuoteMarker, // >
     ImageLinkStart,   // ![
@@ -18,6 +17,10 @@ pub enum SyntaxKind {
     CommentStart,     // <!--
     CommentEnd,       // -->
     Label,            // {#label} for headings, math, etc.
+
+    // Math
+    InlineMath, // $
+    MathMarker, // $$
 
     // Composite nodes
     ROOT,
@@ -34,10 +37,10 @@ pub enum SyntaxKind {
     Comment,
 
     // LaTeX environments
-    LatexCommand,     // \command{...}
+    LatexCommand, // \command{...}
     LatexEnvironment,
-    LatexEnvBegin,
-    LatexEnvEnd,
+    LatexEnvBegin, // \begin{...}
+    LatexEnvEnd,   // \end{...}
     LatexEnvContent,
 
     // Tables

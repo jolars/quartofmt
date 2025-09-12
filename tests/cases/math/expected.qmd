@@ -1,3 +1,7 @@
 $$
 f(x) = x^2
 $$ {#eq:foobar}
+
+$$
+\mathrm{E}=mc^2
+$$

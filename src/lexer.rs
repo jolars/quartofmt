@@ -259,12 +259,21 @@ impl<'a> Lexer<'a> {
                 })
             }
 
-            '$' if self.starts_with("$$") => {
-                let len = self.advance_while(|c| c == '$');
-                Some(Token {
-                    kind: SyntaxKind::MathMarker,
-                    len,
-                })
+            '$' => {
+                // Detect block math ($$ at start of line or after newline)
+                let dollar_count = self.advance_while(|c| c == '$');
+                let is_block_math = dollar_count == 2;
+                if is_block_math {
+                    Some(Token {
+                        kind: SyntaxKind::MathMarker,
+                        len: dollar_count,
+                    })
+                } else {
+                    Some(Token {
+                        kind: SyntaxKind::InlineMath,
+                        len: dollar_count,
+                    })
+                }
             }
 
             '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {

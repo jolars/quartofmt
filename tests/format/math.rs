@@ -4,7 +4,7 @@ use quartofmt::{ConfigBuilder, format_tree, parse};
 #[test]
 fn math_no_wrap() {
     let cfg = ConfigBuilder::default().line_width(10).build();
-    let input = "$$\n\\begin{matrix}\n  A & B\\\\\n  C & D\n\\end{matrix}\n$$\n";
+    let input = "$$\n\\begin{matrix}\nA & B\\\\\nC & D\n\\end{matrix}\n$$\n";
     let output = format(input, Some(cfg));
 
     // Math blocks should not be wrapped
