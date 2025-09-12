@@ -2,7 +2,10 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn format_qmd(input: &str, line_width: Option<usize>) -> String {
-    quartofmt::format(input, line_width)
+    let cfg = quartofmt::ConfigBuilder::default()
+        .line_width(line_width.unwrap_or(80))
+        .build();
+    quartofmt::format(input, Some(cfg))
 }
 
 // Optional: expose tokenizer/AST for debugging

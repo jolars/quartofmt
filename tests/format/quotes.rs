@@ -3,7 +3,7 @@ use quartofmt::format;
 #[test]
 fn quote_single_line() {
     let input = "> This is a single line quote.\n";
-    let output = format(input, Some(80));
+    let output = format(input, None);
 
     assert!(output.starts_with("> "));
     assert!(output.contains("single line quote"));
@@ -12,7 +12,7 @@ fn quote_single_line() {
 #[test]
 fn quote_multi_line_continuous() {
     let input = "> This is a multi-line quote\n> that continues on the next line.\n";
-    let output = format(input, Some(80));
+    let output = format(input, None);
 
     for line in output.lines() {
         assert!(
@@ -26,8 +26,9 @@ fn quote_multi_line_continuous() {
 
 #[test]
 fn quote_with_wrapping() {
+    let cfg = quartofmt::ConfigBuilder::default().line_width(25).build();
     let input = "> This is a very long quote that should definitely be wrapped when the line width is set to a small value like twenty characters.\n";
-    let output = format(input, Some(25));
+    let output = format(input, Some(cfg));
 
     for line in output.lines() {
         if !line.is_empty() {
@@ -43,7 +44,7 @@ fn quote_with_wrapping() {
 #[test]
 fn quote_with_blank_lines() {
     let input = "> First paragraph in quote\n>\n> Second paragraph in quote\n";
-    let output = format(input, Some(80));
+    let output = format(input, None);
 
     for line in output.lines() {
         // All lines should start with ">", but blank quote lines are just ">"

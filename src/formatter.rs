@@ -1,15 +1,16 @@
+use crate::config::Config;
 use crate::syntax::{SyntaxKind, SyntaxNode};
 
 pub struct Formatter {
     output: String,
-    line_width: usize,
+    config: Config,
 }
 
 impl Formatter {
-    pub fn new(line_width: usize) -> Self {
+    pub fn new(config: Config) -> Self {
         Self {
-            output: String::with_capacity(8192), // Pre-allocate reasonable size
-            line_width,
+            output: String::with_capacity(8192),
+            config,
         }
     }
 
@@ -35,6 +36,9 @@ impl Formatter {
     }
 
     fn format_node(&mut self, node: &SyntaxNode, indent: usize) {
+        let line_width = self.config.line_width.unwrap();
+        let math_indent = self.config.math_indent.unwrap();
+
         match node.kind() {
             SyntaxKind::ROOT | SyntaxKind::DOCUMENT => {
                 for el in node.children_with_tokens() {
@@ -83,7 +87,7 @@ impl Formatter {
                     match child.kind() {
                         SyntaxKind::PARAGRAPH => {
                             let text = child.text().to_string().trim().to_string();
-                            let wrapped = textwrap::fill(&text, self.line_width.saturating_sub(2));
+                            let wrapped = textwrap::fill(&text, line_width.saturating_sub(2));
                             for line in wrapped.lines() {
                                 self.output.push_str("> ");
                                 self.output.push_str(line);
@@ -103,7 +107,7 @@ impl Formatter {
 
             SyntaxKind::PARAGRAPH => {
                 let text = node.text().to_string();
-                let wrapped = self.wrap_text(&text, self.line_width);
+                let wrapped = self.wrap_text(&text, line_width);
 
                 if !wrapped.is_empty() {
                     self.output.push_str(&wrapped);
@@ -142,7 +146,7 @@ impl Formatter {
                     let content = trimmed[marker_end + 1..].trim();
                     if !content.is_empty() {
                         let available_width =
-                            self.line_width.saturating_sub(marker.len() + total_indent);
+                            line_width.saturating_sub(marker.len() + total_indent);
                         let wrapped = self.wrap_text(content, available_width);
 
                         for (i, line) in wrapped.lines().enumerate() {
@@ -208,7 +212,40 @@ impl Formatter {
                 }
             }
 
-            SyntaxKind::CodeBlock | SyntaxKind::MathBlock | SyntaxKind::FRONTMATTER => {
+            SyntaxKind::MathBlock => {
+                let text = node.text().to_string();
+                let lines: Vec<&str> = text.lines().collect();
+                // Compute minimum indentation of all non-empty, non-fence, non-label lines
+                let min_indent = lines
+                    .iter()
+                    .filter(|line| {
+                        let l = line.trim();
+                        !l.is_empty() && l != "$$" && !l.starts_with("$$") && !l.starts_with("{#")
+                    })
+                    .map(|line| line.chars().take_while(|c| c.is_whitespace()).count())
+                    .min()
+                    .unwrap_or(0);
+
+                for line in lines {
+                    // Remove min_indent from content lines, leave fence/label lines unchanged
+                    let trimmed = if line.trim() == "$$"
+                        || line.trim().starts_with("$$")
+                        || line.trim().starts_with("{#")
+                    {
+                        line
+                    } else if line.len() >= min_indent {
+                        &line[min_indent..]
+                    } else {
+                        line
+                    };
+                    // Add math_indent spaces to each line
+                    self.output.push_str(&" ".repeat(math_indent));
+                    self.output.push_str(trimmed);
+                    self.output.push('\n');
+                }
+            }
+
+            SyntaxKind::CodeBlock | SyntaxKind::FRONTMATTER => {
                 // Preserve these blocks as-is
                 let text = node.text().to_string();
                 self.output.push_str(&text);
@@ -231,6 +268,6 @@ impl Formatter {
     }
 }
 
-pub fn format_tree(tree: &SyntaxNode, line_width: usize) -> String {
-    Formatter::new(line_width).format(tree)
+pub fn format_tree(tree: &SyntaxNode, config: &Config) -> String {
+    Formatter::new(config.clone()).format(tree)
 }

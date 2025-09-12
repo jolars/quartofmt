@@ -5,12 +5,43 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     #[serde(default)]
     pub line_width: Option<usize>,
     #[serde(default)]
     pub wrap: Option<WrapMode>,
+    #[serde(default)]
+    pub math_indent: Option<usize>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            line_width: Some(80),
+            wrap: None,
+            math_indent: Some(0),
+        }
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct ConfigBuilder {
+    config: Config,
+}
+
+impl ConfigBuilder {
+    pub fn math_indent(mut self, indent: usize) -> Self {
+        self.config.math_indent = Some(indent);
+        self
+    }
+    pub fn line_width(mut self, width: usize) -> Self {
+        self.config.line_width = Some(width);
+        self
+    }
+    pub fn build(self) -> Config {
+        self.config
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

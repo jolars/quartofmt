@@ -2,9 +2,10 @@ use quartofmt::format;
 
 #[test]
 fn wrapping() {
+    let cfg = quartofmt::ConfigBuilder::default().line_width(20).build();
     let input =
         "This is a long line that should be wrapped to a shorter width for testing purposes.\n";
-    let output = format(input, Some(20));
+    let output = format(input, Some(cfg));
 
     // Check that lines are wrapped
     for line in output.lines() {
@@ -15,7 +16,7 @@ fn wrapping() {
 #[test]
 fn blank_line_preservation() {
     let input = "First paragraph\n\n\nSecond paragraph\n";
-    let output = format(input, Some(80));
+    let output = format(input, None);
 
     // Should preserve the double blank line between paragraphs
     let expected = "First paragraph\n\n\nSecond paragraph\n";
@@ -30,8 +31,9 @@ fn blank_line_preservation() {
 #[test]
 fn paragraph_wrapping_edge_cases() {
     // Test 1: Paragraph with internal line breaks should be reflowed
+    let cfg = quartofmt::ConfigBuilder::default().line_width(25).build();
     let input = "This is a long\nsentence that should\nbe wrapped properly.\n";
-    let output = format(input, Some(25));
+    let output = format(input, Some(cfg));
 
     // Should reflow the text, not preserve internal line breaks
     assert!(!output.contains("long\nsentence"));
@@ -39,11 +41,11 @@ fn paragraph_wrapping_edge_cases() {
 
     // Test 2: Multiple spaces should be normalized
     let input2 = "Word1    word2     word3\n";
-    let output2 = format(input2, Some(80));
+    let output2 = format(input2, None);
     similar_asserts::assert_eq!(output2, "Word1 word2 word3\n");
 
     // Test 3: Leading/trailing whitespace should be trimmed
     let input3 = "  Leading and trailing  \n";
-    let output3 = format(input3, Some(80));
+    let output3 = format(input3, None);
     similar_asserts::assert_eq!(output3, "Leading and trailing\n");
 }

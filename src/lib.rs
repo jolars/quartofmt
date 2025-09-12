@@ -4,6 +4,8 @@ pub mod lexer;
 pub mod parser;
 pub mod syntax;
 
+pub use config::Config;
+pub use config::ConfigBuilder;
 pub use formatter::format_tree;
 pub use parser::parse;
 
@@ -21,21 +23,28 @@ fn init_logger() {
 /// ```rust
 /// use quartofmt::format;
 ///
+/// let cfg = quartofmt::ConfigBuilder::default().line_width(80).build();
+///
 /// let input = "This is a very long line that should be wrapped.";
-/// let formatted = format(input, Some(80));
+/// let formatted = format(input, Some(cfg));
 /// ```
 ///
 /// # Arguments
 ///
 /// * `input` - The Quarto document content to format
 /// * `line_width` - Optional line width (defaults to 80)
-pub fn format(input: &str, line_width: Option<usize>) -> String {
+pub fn format(input: &str, config: Option<Config>) -> String {
     #[cfg(debug_assertions)]
     {
         init_logger();
     }
-    // Normalize line endings to Unix style first
+
     let normalized_input = input.replace("\r\n", "\n");
     let tree = parse(&normalized_input);
-    format_tree(&tree, line_width.unwrap_or(80))
+    let config = config.unwrap_or_default();
+    format_tree(&tree, &config)
+}
+
+pub fn format_with_defaults(input: &str) -> String {
+    format(input, None)
 }

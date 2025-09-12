@@ -53,7 +53,7 @@ fn main() -> io::Result<()> {
     let (cfg, _cfg_path) = quartofmt::config::load(cli.config.as_deref(), &start_dir)?;
 
     let input = read_all(cli.file.as_ref())?;
-    let output = format(&input, cfg.line_width);
+    let output = format(&input, Some(cfg));
 
     if cli.check {
         if input != output {

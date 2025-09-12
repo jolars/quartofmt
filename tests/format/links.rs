@@ -2,8 +2,9 @@ use quartofmt::format;
 
 #[test]
 fn markdown_link_no_break() {
+    let cfg = quartofmt::ConfigBuilder::default().line_width(30).build();
     let input = "after this line comes a link ![a link](https://alink.com)\n";
-    let output = format(input, Some(30));
+    let output = format(input, Some(cfg));
 
     // The ![a link](https://alink.com) should stay together
     assert!(
@@ -17,8 +18,9 @@ fn markdown_link_no_break() {
     );
 
     // Test regular links too - they can be broken, but not at critical points
+    let cfg = quartofmt::ConfigBuilder::default().line_width(25).build();
     let input2 = "here is a regular [link text](https://example.com) in text\n";
-    let output2 = format(input2, Some(25));
+    let output2 = format(input2, Some(cfg));
 
     // Regular links can be broken, but shouldn't break ](
     assert!(

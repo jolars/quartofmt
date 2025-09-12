@@ -8,6 +8,6 @@ fn simple_table_roundtrip() {
         Cell 1    Cell 2
         Cell 3    Cell 4
     ";
-    let output = format(input, Some(80));
+    let output = format(input, None);
     similar_asserts::assert_eq!(output, input);
 }

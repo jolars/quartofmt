@@ -26,7 +26,7 @@ fn golden_cases() {
         let expected_path = dir.join("expected.qmd");
 
         let input = normalize(&fs::read_to_string(&input_path).unwrap());
-        let output = format(&input, Some(80));
+        let output = format(&input, None);
 
         if update {
             fs::write(&expected_path, &output).unwrap();
