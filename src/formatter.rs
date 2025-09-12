@@ -37,7 +37,6 @@ impl Formatter {
 
     fn format_node(&mut self, node: &SyntaxNode, indent: usize) {
         let line_width = self.config.line_width.unwrap();
-        let math_indent = self.config.math_indent.unwrap();
 
         match node.kind() {
             SyntaxKind::ROOT | SyntaxKind::DOCUMENT => {
