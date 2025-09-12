@@ -127,12 +127,6 @@ impl Formatter {
             SyntaxKind::SimpleTable => {
                 // Preserve table as-is, including line breaks and spacing
                 self.output.push_str(&node.text().to_string());
-                // for el in node.children_with_tokens() {
-                //     match el {
-                //         rowan::NodeOrToken::Token(t) => self.output.push_str(t.text()),
-                //         rowan::NodeOrToken::Node(n) => self.output.push_str(&n.text().to_string()),
-                //     }
-                // }
             }
 
             SyntaxKind::InlineMath => {
