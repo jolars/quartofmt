@@ -6,7 +6,7 @@ fn latex_command_preservation() {
     let output = format(input, Some(80));
 
     // LaTeX commands should be preserved exactly as written
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }
 
 #[test]
@@ -16,7 +16,7 @@ fn latex_command_in_paragraph() {
 
     // LaTeX command should be preserved within the paragraph
     assert!(output.contains("\\textbf{bold text}"));
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }
 
 #[test]
@@ -25,7 +25,7 @@ fn latex_command_with_multiple_args() {
     let output = format(input, Some(80));
 
     // Complex LaTeX commands should be preserved
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }
 
 #[test]

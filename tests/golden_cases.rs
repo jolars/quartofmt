@@ -1,5 +1,4 @@
 use quartofmt::format;
-use similar_asserts::assert_eq;
 use std::{fs, path::Path};
 
 fn normalize(s: &str) -> String {
@@ -38,7 +37,7 @@ fn golden_cases() {
             .map(|s| normalize(&s))
             .unwrap_or_else(|_| input.clone());
 
-        assert_eq!(
+        similar_asserts::assert_eq!(
             expected,
             output,
             "case: {}",

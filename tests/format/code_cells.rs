@@ -6,5 +6,5 @@ fn code_cell_roundtrip() {
     let output = format(input, Some(80));
 
     // Code blocks should be preserved exactly
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }

@@ -4,7 +4,7 @@ use quartofmt::format;
 fn list_roundtrip() {
     let input = "- First item\n- Second item\n";
     let output = format(input, Some(80));
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }
 
 #[test]
@@ -12,7 +12,7 @@ fn list_wrapping() {
     let input = "- A list with items that should wrap properly and retain their markers\n- Second item with more text to wrap\n";
     let output = format(input, Some(31));
     let expected = "- A list with items that should\n  wrap properly and retain\n  their markers\n- Second item with more text\n  to wrap\n";
-    assert_eq!(output, expected);
+    similar_asserts::assert_eq!(output, expected);
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn nested_list_wrapping() {
     let input = "- Top level\n  - Nested level 1 with some text that should wrap\n    - Nested level 2 with even more text to wrap and demonstrate nesting\n";
     let output = format(input, Some(32));
     let expected = "- Top level\n  - Nested level 1 with some\n    text that should wrap\n    - Nested level 2 with even\n      more text to wrap and\n      demonstrate nesting\n";
-    assert_eq!(output, expected);
+    similar_asserts::assert_eq!(output, expected);
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn list_item_link_no_break() {
 fn nested_divs_roundtrip() {
     let input = ":::: columns\n\n::: column\n\nColumn 1 content\n\n:::\n\n::: column\n\nColumns 2 content\n\n:::\n\n::::\n";
     let output = format(input, Some(80));
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }
 
 #[test]

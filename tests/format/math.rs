@@ -6,5 +6,5 @@ fn math_no_wrap() {
     let output = format(input, Some(10));
 
     // Math blocks should not be wrapped
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }

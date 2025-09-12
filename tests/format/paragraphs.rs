@@ -19,12 +19,12 @@ fn blank_line_preservation() {
 
     // Should preserve the double blank line between paragraphs
     let expected = "First paragraph\n\n\nSecond paragraph\n";
-    assert_eq!(output, expected);
+    similar_asserts::assert_eq!(output, expected);
 
     // Also test that we don't add extra blank lines
     let lines: Vec<&str> = output.split('\n').collect();
-    assert_eq!(lines[1], ""); // First blank line
-    assert_eq!(lines[2], ""); // Second blank line
+    similar_asserts::assert_eq!(lines[1], ""); // First blank line
+    similar_asserts::assert_eq!(lines[2], ""); // Second blank line
 }
 
 #[test]
@@ -40,10 +40,10 @@ fn paragraph_wrapping_edge_cases() {
     // Test 2: Multiple spaces should be normalized
     let input2 = "Word1    word2     word3\n";
     let output2 = format(input2, Some(80));
-    assert_eq!(output2, "Word1 word2 word3\n");
+    similar_asserts::assert_eq!(output2, "Word1 word2 word3\n");
 
     // Test 3: Leading/trailing whitespace should be trimmed
     let input3 = "  Leading and trailing  \n";
     let output3 = format(input3, Some(80));
-    assert_eq!(output3, "Leading and trailing\n");
+    similar_asserts::assert_eq!(output3, "Leading and trailing\n");
 }

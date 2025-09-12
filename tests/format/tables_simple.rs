@@ -9,5 +9,5 @@ fn simple_table_roundtrip() {
         Cell 3    Cell 4
     ";
     let output = format(input, Some(80));
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }

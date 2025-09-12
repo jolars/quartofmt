@@ -6,5 +6,5 @@ fn fenced_div_roundtrip() {
     let output = format(input, Some(80));
 
     // Fenced divs should be preserved exactly
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }

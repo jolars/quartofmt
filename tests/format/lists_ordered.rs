@@ -4,7 +4,7 @@ use quartofmt::format;
 fn numbered_list_roundtrip() {
     let input = "1. First item\n2. Second item\n3. Third item\n";
     let output = format(input, Some(80));
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 }
 
 #[test]
@@ -13,7 +13,7 @@ fn numbered_list_formatting() {
     let output = format(input, Some(80));
 
     // Should preserve numbered list structure
-    assert_eq!(output, input);
+    similar_asserts::assert_eq!(output, input);
 
     // Test with wrapping
     let input_long = "1. This is a very long numbered list item that should wrap properly when the line width is constrained\n2. Second item with more text to wrap around\n";
