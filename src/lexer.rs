@@ -493,3 +493,26 @@ fn lexer_math_block_tokens() {
         ]
     );
 }
+
+#[test]
+fn lexer_inline_math_tokens() {
+    let input = "This is $x^2$ inline math.";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    assert_eq!(
+        kinds,
+        vec![
+            SyntaxKind::TEXT,         // This
+            SyntaxKind::WHITESPACE,
+            SyntaxKind::TEXT,         // is
+            SyntaxKind::WHITESPACE,
+            SyntaxKind::InlineMath,   // $
+            SyntaxKind::TEXT,         // x^2
+            SyntaxKind::InlineMath,   // $
+            SyntaxKind::WHITESPACE,
+            SyntaxKind::TEXT,         // inline
+            SyntaxKind::WHITESPACE,
+            SyntaxKind::TEXT,         // math.
+        ]
+    );
+}
