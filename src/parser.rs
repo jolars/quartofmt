@@ -121,6 +121,7 @@ impl<'a> Parser<'a> {
                     log::debug!("Parsing standalone LaTeX command");
                     self.parse_standalone_latex_command()
                 }
+                Some(SyntaxKind::LatexEnvBegin) => self.parse_latex_environment(),
                 Some(SyntaxKind::BlockQuoteMarker) => self.parse_block_quote(),
                 Some(SyntaxKind::ListMarker) => self.parse_list(0),
                 Some(SyntaxKind::NEWLINE) if self.is_blank_line() => self.parse_blank_line(),
@@ -230,6 +231,33 @@ impl<'a> Parser<'a> {
         // Closing fence
         if self.at(SyntaxKind::FenceMarker) {
             self.builder.start_node(SyntaxKind::CodeFenceClose.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+
+        self.builder.finish_node();
+    }
+
+    fn parse_latex_environment(&mut self) {
+        self.builder.start_node(SyntaxKind::LatexEnvironment.into());
+
+        // Begin token
+        if self.at(SyntaxKind::LatexEnvBegin) {
+            self.builder.start_node(SyntaxKind::LatexEnvBegin.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+
+        // Content until matching end
+        self.builder.start_node(SyntaxKind::LatexEnvContent.into());
+        while !self.at_eof() && !self.at(SyntaxKind::LatexEnvEnd) {
+            self.advance();
+        }
+        self.builder.finish_node();
+
+        // End token
+        if self.at(SyntaxKind::LatexEnvEnd) {
+            self.builder.start_node(SyntaxKind::LatexEnvEnd.into());
             self.advance();
             self.builder.finish_node();
         }

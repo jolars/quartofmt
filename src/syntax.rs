@@ -11,7 +11,6 @@ pub enum SyntaxKind {
     DivMarker,        // :::
     MathMarker,       // $$
     FrontmatterDelim, // --- or +++
-    LatexCommand,     // \command{...}
     BlockQuoteMarker, // >
     ImageLinkStart,   // ![
     LinkStart,        // [
@@ -33,6 +32,13 @@ pub enum SyntaxKind {
     List,
     ListItem,
     Comment,
+
+    // LaTeX environments
+    LatexCommand,     // \command{...}
+    LatexEnvironment,
+    LatexEnvBegin,
+    LatexEnvEnd,
+    LatexEnvContent,
 
     // Tables
     SimpleTable,

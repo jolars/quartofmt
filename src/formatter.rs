@@ -53,6 +53,15 @@ impl Formatter {
                 }
             }
 
+            SyntaxKind::LatexEnvironment => {
+                // // Output the environment exactly as written
+                let text = node.text().to_string();
+                self.output.push_str(&text);
+                if !text.ends_with('\n') {
+                    self.output.push('\n');
+                }
+            }
+
             SyntaxKind::Comment => {
                 let text = node.text().to_string();
                 self.output.push_str(&text);

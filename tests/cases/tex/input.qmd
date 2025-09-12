@@ -1,0 +1,10 @@
+\begin{algorithm}[H]
+  \Repeat{sample is accepted}{
+    Generate $Y \sim \mathrm{Uniform}(-\pi, \pi)$\;
+    Generate $U \sim \mathrm{Uniform}(0, 1)$\;
+    \If{$U \leq e^{\kappa(\cos(Y) - 1)}$}{
+      Accept $Y$ as a sample\;
+    }
+  }
+  \caption{Rejection sampling for the von Mises distribution}
+\end{algorithm}

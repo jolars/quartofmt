@@ -103,6 +103,48 @@ impl<'a> Lexer<'a> {
 
         let ch = self.current_char()?;
 
+        // Detect LaTeX environment begin: \begin{...}
+        if self.starts_with("\\begin{") {
+            let start_pos = self.pos;
+            // Consume \begin{
+            for _ in 0.."\\begin{".len() {
+                self.advance();
+            }
+            // Consume until }
+            while let Some(c) = self.current_char() {
+                self.advance();
+                if c == '}' {
+                    break;
+                }
+            }
+            let len = self.pos - start_pos;
+            return Some(Token {
+                kind: SyntaxKind::LatexEnvBegin,
+                len,
+            });
+        }
+
+        // Detect LaTeX environment end: \end{...}
+        if self.starts_with("\\end{") {
+            let start_pos = self.pos;
+            // Consume \end{
+            for _ in 0.."\\end{".len() {
+                self.advance();
+            }
+            // Consume until }
+            while let Some(c) = self.current_char() {
+                self.advance();
+                if c == '}' {
+                    break;
+                }
+            }
+            let len = self.pos - start_pos;
+            return Some(Token {
+                kind: SyntaxKind::LatexEnvEnd,
+                len,
+            });
+        }
+
         match ch {
             '\n' => {
                 self.advance();
