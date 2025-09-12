@@ -6,7 +6,7 @@ description = "A formatter for Quarto documents"
 license = "MIT"
 repository = "https://github.com/jolars/quartofmt"
 homepage = "https://github.com/jolars/quartofmt"
-keywords = ["quarto", "pandoc", "markdown", "formatter", "pandoc"]
+keywords = ["quarto", "pandoc", "markdown", "formatter"]
 categories = ["command-line-utilities", "text-processing"]
 
 [workspace]
