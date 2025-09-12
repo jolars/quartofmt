@@ -349,20 +349,6 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
-    fn parse_inline_math(&mut self) {
-        self.builder.start_node(SyntaxKind::InlineMath.into());
-        self.advance(); // consume opening $ or $$
-        while !self.at_eof() && !self.at(SyntaxKind::InlineMath) && !self.at(SyntaxKind::MathMarker)
-        {
-            self.advance();
-        }
-        // Closing $ or $$
-        if self.at(SyntaxKind::InlineMath) || self.at(SyntaxKind::MathMarker) {
-            self.advance();
-        }
-        self.builder.finish_node();
-    }
-
     fn parse_block_math(&mut self) {
         self.builder.start_node(SyntaxKind::MathBlock.into());
 
