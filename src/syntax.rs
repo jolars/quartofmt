@@ -19,8 +19,8 @@ pub enum SyntaxKind {
     Label,            // {#label} for headings, math, etc.
 
     // Math
-    InlineMath, // $
-    MathMarker, // $$
+    InlineMathMarker, // $
+    BlockMathMarker, // $$
     MathBlock,
     MathContent,
 

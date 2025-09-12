@@ -115,7 +115,7 @@ impl<'a> Parser<'a> {
             match self.current_token().map(|t| t.kind) {
                 Some(SyntaxKind::FenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
-                Some(SyntaxKind::MathMarker) => self.parse_block_math(),
+                Some(SyntaxKind::BlockMathMarker) => self.parse_block_math(),
                 Some(SyntaxKind::CommentStart) => self.parse_comment(),
                 Some(SyntaxKind::LatexCommand) if self.is_standalone_latex_command() => {
                     log::debug!("Parsing standalone LaTeX command");
@@ -353,22 +353,22 @@ impl<'a> Parser<'a> {
         self.builder.start_node(SyntaxKind::MathBlock.into());
 
         // Opening $$
-        if self.at(SyntaxKind::MathMarker) {
-            self.builder.start_node(SyntaxKind::MathMarker.into());
+        if self.at(SyntaxKind::BlockMathMarker) {
+            self.builder.start_node(SyntaxKind::BlockMathMarker.into());
             self.advance();
             self.builder.finish_node();
         }
 
         // Math content (until closing $$)
         self.builder.start_node(SyntaxKind::MathContent.into());
-        while !self.at_eof() && !self.at(SyntaxKind::MathMarker) {
+        while !self.at_eof() && !self.at(SyntaxKind::BlockMathMarker) {
             self.advance();
         }
         self.builder.finish_node();
 
         // Closing $$
-        if self.at(SyntaxKind::MathMarker) {
-            self.builder.start_node(SyntaxKind::MathMarker.into());
+        if self.at(SyntaxKind::BlockMathMarker) {
+            self.builder.start_node(SyntaxKind::BlockMathMarker.into());
             self.advance();
             self.builder.finish_node();
         }
@@ -556,7 +556,7 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
-                Some(SyntaxKind::FenceMarker | SyntaxKind::DivMarker | SyntaxKind::MathMarker) => {
+                Some(SyntaxKind::FenceMarker | SyntaxKind::DivMarker | SyntaxKind::BlockMathMarker) => {
                     log::trace!("Breaking paragraph on fence/div/math marker");
                     break;
                 }

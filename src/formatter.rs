@@ -211,7 +211,7 @@ impl Formatter {
                 }
             }
 
-            SyntaxKind::InlineMath => {
+            SyntaxKind::InlineMathMarker => {
                 // Output inline math as $...$ or $$...$$ (on the same line)
                 self.output.push_str(node.text().to_string().trim());
             }

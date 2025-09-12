@@ -265,12 +265,12 @@ impl<'a> Lexer<'a> {
                 let is_block_math = dollar_count == 2;
                 if is_block_math {
                     Some(Token {
-                        kind: SyntaxKind::MathMarker,
+                        kind: SyntaxKind::BlockMathMarker,
                         len: dollar_count,
                     })
                 } else {
                     Some(Token {
-                        kind: SyntaxKind::InlineMath,
+                        kind: SyntaxKind::InlineMathMarker,
                         len: dollar_count,
                     })
                 }
@@ -482,11 +482,11 @@ fn lexer_math_block_tokens() {
     assert_eq!(
         kinds,
         vec![
-            SyntaxKind::MathMarker,   // $$
+            SyntaxKind::BlockMathMarker,   // $$
             SyntaxKind::NEWLINE,
             SyntaxKind::TEXT,         // f(x) = x^2
             SyntaxKind::NEWLINE,
-            SyntaxKind::MathMarker,   // $$
+            SyntaxKind::BlockMathMarker,   // $$
             SyntaxKind::WHITESPACE,
             SyntaxKind::Label,        // {#eq:foobar}
             SyntaxKind::NEWLINE,
@@ -506,9 +506,9 @@ fn lexer_inline_math_tokens() {
             SyntaxKind::WHITESPACE,
             SyntaxKind::TEXT,         // is
             SyntaxKind::WHITESPACE,
-            SyntaxKind::InlineMath,   // $
+            SyntaxKind::InlineMathMarker,   // $
             SyntaxKind::TEXT,         // x^2
-            SyntaxKind::InlineMath,   // $
+            SyntaxKind::InlineMathMarker,   // $
             SyntaxKind::WHITESPACE,
             SyntaxKind::TEXT,         // inline
             SyntaxKind::WHITESPACE,
