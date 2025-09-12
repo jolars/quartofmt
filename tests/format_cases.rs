@@ -1,60 +1,48 @@
-use std::fs;
-use std::io;
-use std::path::{Path, PathBuf};
-
 use quartofmt::format;
+use similar_asserts::assert_eq;
+use std::{fs, path::Path};
 
-fn cases_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("cases")
-}
-
-fn run_case(dir: &Path) -> io::Result<()> {
-    let input_path = dir.join("input.qmd");
-    let expected_path = dir.join("expected.qmd");
-
-    let input = fs::read_to_string(&input_path)?;
-    let expected = match fs::read_to_string(&expected_path) {
-        Ok(s) => s,
-        Err(_) => input.clone(), // default to round-trip if expected is absent
-    };
-
-    let expected = expected.replace("\r\n", "\n");
-
-    let output = format(&input, Some(80));
-
-    if output != expected {
-        let diff = diff::lines(&expected, &output)
-            .into_iter()
-            .map(|d| match d {
-                diff::Result::Left(l) => format!("-{l}"),
-                diff::Result::Right(r) => format!("+{r}"),
-                diff::Result::Both(b, _) => format!(" {b}"),
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        panic!(
-            "Mismatch in case: {}\nDiff:\n{}",
-            dir.file_name()
-                .map(|s| s.to_string_lossy())
-                .unwrap_or_default(),
-            diff
-        );
-    }
-
-    Ok(())
+fn normalize(s: &str) -> String {
+    s.replace("\r\n", "\n")
 }
 
 #[test]
-fn golden_cases() -> io::Result<()> {
-    let root = cases_root();
-    for entry in fs::read_dir(&root)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            run_case(&path)?;
+fn golden_cases() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("cases");
+
+    let mut entries: Vec<_> = fs::read_dir(&root)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_dir())
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    let update = std::env::var_os("UPDATE_EXPECTED").is_some();
+
+    for entry in entries {
+        let dir = entry.path();
+        let input_path = dir.join("input.qmd");
+        let expected_path = dir.join("expected.qmd");
+
+        let input = normalize(&fs::read_to_string(&input_path).unwrap());
+        let output = format(&input, Some(80));
+
+        if update {
+            fs::write(&expected_path, &output).unwrap();
+            continue;
         }
+
+        let expected = fs::read_to_string(&expected_path)
+            .map(|s| normalize(&s))
+            .unwrap_or_else(|_| input.clone());
+
+        assert_eq!(
+            expected,
+            output,
+            "case: {}",
+            dir.file_name().unwrap().to_string_lossy()
+        );
     }
-    Ok(())
 }
