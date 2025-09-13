@@ -89,3 +89,39 @@ fn lexer_escaped_dollar_is_text() {
         "Unescaped $ should be InlineMathMarker"
     );
 }
+
+#[test]
+fn lexer_code_span_exact_token_sequence() {
+    let input = "foo `bar $baz$` qux";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    let expected = vec![
+        crate::syntax::SyntaxKind::TEXT, // foo
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::CodeSpan, // `bar $baz$`
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // qux
+    ];
+    assert_eq!(
+        kinds, expected,
+        "Lexer should tokenize inline code as CodeSpan"
+    );
+}
+
+#[test]
+fn lexer_multiline_code_span_tokenizes_as_single_code_span() {
+    let input = "foo `bar\nbaz $qux$` quux";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    let expected = vec![
+        crate::syntax::SyntaxKind::TEXT, // foo
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::CodeSpan, // `bar\nbaz $qux$`
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // quux
+    ];
+    assert_eq!(
+        kinds, expected,
+        "Lexer should tokenize multiline inline code as a single CodeSpan"
+    );
+}

@@ -113,7 +113,7 @@ impl<'a> Parser<'a> {
             }
 
             match self.current_token().map(|t| t.kind) {
-                Some(SyntaxKind::FenceMarker) => self.parse_code_block(),
+                Some(SyntaxKind::CodeFenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::InlineMathMarker) => self.parse_inline_math(),
                 Some(SyntaxKind::BlockMathMarker) => self.parse_block_math(),
@@ -224,13 +224,13 @@ impl<'a> Parser<'a> {
 
         // Code content
         self.builder.start_node(SyntaxKind::CodeContent.into());
-        while !self.at_eof() && !self.at(SyntaxKind::FenceMarker) {
+        while !self.at_eof() && !self.at(SyntaxKind::CodeFenceMarker) {
             self.advance();
         }
         self.builder.finish_node();
 
         // Closing fence
-        if self.at(SyntaxKind::FenceMarker) {
+        if self.at(SyntaxKind::CodeFenceMarker) {
             self.builder.start_node(SyntaxKind::CodeFenceClose.into());
             self.advance();
             self.builder.finish_node();
@@ -581,7 +581,9 @@ impl<'a> Parser<'a> {
                 }
 
                 Some(
-                    SyntaxKind::FenceMarker | SyntaxKind::DivMarker | SyntaxKind::BlockMathMarker,
+                    SyntaxKind::CodeFenceMarker
+                    | SyntaxKind::DivMarker
+                    | SyntaxKind::BlockMathMarker,
                 ) => {
                     log::trace!("Breaking paragraph on fence/div/math marker");
                     break;

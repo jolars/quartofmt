@@ -7,7 +7,6 @@ pub enum SyntaxKind {
     WHITESPACE = 0,
     NEWLINE,
     TEXT,
-    FenceMarker,      // ``` or ~~~
     DivMarker,        // :::
     FrontmatterDelim, // --- or +++
     BlockQuoteMarker, // >
@@ -25,11 +24,15 @@ pub enum SyntaxKind {
     MathBlock,
     MathContent,
 
+    // Code
+    CodeSpan,
+    CodeFenceMarker, // ``` or ~~~
+    CodeBlock,
+
     // Composite nodes
     ROOT,
     DOCUMENT,
     FRONTMATTER,
-    CodeBlock,
     FencedDiv,
     PARAGRAPH,
     BlankLine,

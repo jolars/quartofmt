@@ -235,18 +235,39 @@ impl<'a> Lexer<'a> {
                 })
             }
 
-            '`' if self.starts_with("```") => {
-                let len = self.advance_while(|c| c == '`');
-                Some(Token {
-                    kind: SyntaxKind::FenceMarker,
-                    len,
-                })
+            '`' => {
+                // Distinguish between code block fence (``` at BOL) and inline code span (`...`)
+                let start_pos = self.pos;
+                let tick_count = self.advance_while(|c| c == '`');
+                // Code block fence: 3 or more backticks at BOL or after newline
+                let is_bol = start_pos == 0 || self.input[..start_pos].ends_with('\n');
+                if tick_count >= 3 && is_bol {
+                    Some(Token {
+                        kind: SyntaxKind::CodeFenceMarker,
+                        len: tick_count,
+                    })
+                } else {
+                    // Inline code span: consume until matching number of backticks
+                    while self.pos < self.input.len() {
+                        if self.starts_with(&"`".repeat(tick_count)) {
+                            self.advance_while(|c| c == '`');
+                            break;
+                        } else {
+                            self.advance();
+                        }
+                    }
+                    let len = self.pos - start_pos;
+                    Some(Token {
+                        kind: SyntaxKind::CodeSpan,
+                        len,
+                    })
+                }
             }
 
             '~' if self.starts_with("~~~") => {
                 let len = self.advance_while(|c| c == '~');
                 Some(Token {
-                    kind: SyntaxKind::FenceMarker,
+                    kind: SyntaxKind::CodeFenceMarker,
                     len,
                 })
             }
