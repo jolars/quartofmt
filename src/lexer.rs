@@ -306,7 +306,7 @@ impl<'a> Lexer<'a> {
                 })
             }
 
-            '>' if self.starts_with("-->") => {
+            '-' if self.starts_with("-->") => {
                 self.advance(); // consume -
                 self.advance(); // consume -
                 self.advance(); // consume >
@@ -514,5 +514,18 @@ fn lexer_inline_math_tokens() {
             SyntaxKind::WHITESPACE,       //
             SyntaxKind::TEXT,             // math.
         ]
+    );
+}
+
+#[test]
+fn lexer_comment_end_bug() {
+    let input = "-->";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    // Expect a single CommentEnd token
+    assert_eq!(
+        kinds,
+        vec![SyntaxKind::CommentEnd],
+        "Lexer should produce CommentEnd for '-->'"
     );
 }
