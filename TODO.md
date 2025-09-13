@@ -1,0 +1,66 @@
+Immediate correctness fixes
+
+- List markers: is_list_marker() returns true for “- ” anywhere. Restrict to BOL or after newline/indent-only whitespace to avoid breaking hyphenated text in paragraphs. Do similarly for numbered lists.
+- Panic guards: advance_while() and tokenize() iteration caps will panic on long inputs. Remove in release builds or convert to debug_assert!/logging.
+- Fenced div parsing: parse_fenced_div() calls parse_document(), which nests DOCUMENT nodes inside div content; formatter compensates but it’s awkward. Add a parse_blocks() that parses a sequence of blocks without wrapping in DOCUMENT.
+
+Formatter improvements
+
+- Wrap mode config is unused. Implement:
+  - Off: preserve paragraph whitespace/newlines.
+  - Soft: current wrapping behavior.
+  - Hard: also break overlong tokens.
+- Paragraph formatting currently uses node.text() and normalizes whitespace across everything, which can mangle inline constructs (links, inline code, inline math, LaTeX commands). Prefer walking children tokens:
+  - Keep inline spans (InlineMath, LatexCommand, links, images, inline code) as atomic units when reflowing.
+  - Only collapse/rewrap TEXT and WHITESPACE between inline spans.
+- Lists: Current ListItem formatting derives marker/indent from raw text; fragile for numbered lists and nested mixes. Use the parsed structure (e.g., capture marker and following space as explicit tokens/nodes) so you can compute hanging indents precisely and keep wrapped lines aligned.
+- Avoid emitting extra trailing newlines (audit nodes that push a newline unconditionally).
+
+Parser/lexer coverage to add
+
+- Inline code `...` and code spans with backticks of varying lengths; ensure no math/link parsing inside.
+- Links/images fully (closing ’]’, ’(…)’), autolinks, and reference-style links. Or at least treat [..](..) as atomic for wrapping.
+- HTML blocks and inline HTML beyond comments.
+- Headings, ATX/Setext.
+- Thematic breaks (---, \*\*\*, \_\_\_) vs table underlines.
+- Nested lists with mixed bullets and numbers; list continuation lines.
+- Block quotes with nested lists/code blocks.
+- Escapes and entities.
+
+Testing and quality
+
+- Golden tests: input -> expected output; idempotency tests (format twice == once).
+- Fuzzing (cargo-fuzz) and corpus from Quarto docs.
+- Property tests for tokenization invariants (concatenated token text == input).
+- CI with cargo test + clippy + fmt; add a few big documents for performance smoke tests.
+
+Config/CLI/editor integration
+
+- Provide CLI: quartofmt [--check] [--write] [--config PATH] [--stdin|PATHS].
+- Config precedence is good; add merge-with-defaults and document keys. Consider non-Option fields with serde defaults.
+- Neovim: expose a robust CLI with --stdin --stdout for formatprg or provide an LSP/formatter endpoint.
+
+Architecture polish
+
+- Split parse_document() into parse_blocks() + parse_document() (outer wrapper).
+- Keep DivInfo node (you defined it) and populate it; same for CodeInfo vs including newline in fence nodes.
+- Expose resolved config getters to avoid unwraps.
+
+Performance
+
+- Benchmark wrapping and parsing on large files (cargo bench); preallocate buffers based on input size.
+
+Small targeted fixes to prioritize
+
+- Fix comment end tokenization.
+- Implement config default merging or non-Option serde defaults.
+- Restrict list marker lexing to BOL.
+- Handle $$$ and escaped \$ minimally.
+- Reduce panics in release builds.
+
+With these, you’ll get a more robust formatter that preserves semantics while reflowing text predictably, and you’ll be set up to extend coverage to the rest of Quarto/Markdown constructs.
+
+## User (c5ab8e90-54f2-4948-93b9-5847d9d3184a)───
+
+> #buffers:listed
+> $gpt-5
