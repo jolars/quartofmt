@@ -1,8 +1,10 @@
 Immediate correctness fixes
 
-- List markers: is_list_marker() returns true for “- ” anywhere. Restrict to BOL or after newline/indent-only whitespace to avoid breaking hyphenated text in paragraphs. Do similarly for numbered lists.
-- Panic guards: advance_while() and tokenize() iteration caps will panic on long inputs. Remove in release builds or convert to debug_assert!/logging.
-- Fenced div parsing: parse_fenced_div() calls parse_document(), which nests DOCUMENT nodes inside div content; formatter compensates but it’s awkward. Add a parse_blocks() that parses a sequence of blocks without wrapping in DOCUMENT.
+- Panic guards: advance_while() and tokenize() iteration caps will panic on
+  long inputs. Remove in release builds or convert to debug_assert!/logging.
+- Fenced div parsing: parse_fenced_div() calls parse_document(), which nests
+  DOCUMENT nodes inside div content; formatter compensates but it’s awkward. Add
+  a parse_blocks() that parses a sequence of blocks without wrapping in DOCUMENT.
 
 Formatter improvements
 
@@ -10,11 +12,18 @@ Formatter improvements
   - Off: preserve paragraph whitespace/newlines.
   - Soft: current wrapping behavior.
   - Hard: also break overlong tokens.
-- Paragraph formatting currently uses node.text() and normalizes whitespace across everything, which can mangle inline constructs (links, inline code, inline math, LaTeX commands). Prefer walking children tokens:
-  - Keep inline spans (InlineMath, LatexCommand, links, images, inline code) as atomic units when reflowing.
+- Paragraph formatting currently uses node.text() and normalizes whitespace
+  across everything, which can mangle inline constructs (links, inline code,
+  inline math, LaTeX commands). Prefer walking children tokens:
+  - Keep inline spans (InlineMath, LatexCommand, links, images, inline code) as
+    atomic units when reflowing.
   - Only collapse/rewrap TEXT and WHITESPACE between inline spans.
-- Lists: Current ListItem formatting derives marker/indent from raw text; fragile for numbered lists and nested mixes. Use the parsed structure (e.g., capture marker and following space as explicit tokens/nodes) so you can compute hanging indents precisely and keep wrapped lines aligned.
-- Avoid emitting extra trailing newlines (audit nodes that push a newline unconditionally).
+- Lists: Current ListItem formatting derives marker/indent from raw text;
+  fragile for numbered lists and nested mixes. Use the parsed structure (e.g.,
+  capture marker and following space as explicit tokens/nodes) so you can compute
+  hanging indents precisely and keep wrapped lines aligned.
+- Avoid emitting extra trailing newlines (audit nodes that push a newline
+  unconditionally).
 
 Parser/lexer coverage to add
 
