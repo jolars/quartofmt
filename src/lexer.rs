@@ -34,8 +34,15 @@ impl<'a> Lexer<'a> {
     }
 
     fn is_list_marker(&self) -> bool {
-        // Check if this is a list marker (-, +, *) followed by space
-        if let Some(ch) = self.current_char()
+        // Only treat -, +, * as list marker at BOL or after newline/indent-only whitespace
+        let pos = self.pos;
+        // Find start of line
+        let line_start = self.input[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0);
+        let prefix = &self.input[line_start..pos];
+        // Only allow whitespace before the marker
+        let is_bol_or_indent = prefix.chars().all(|c| c == ' ' || c == '\t');
+        if is_bol_or_indent
+            && let Some(ch) = self.current_char()
             && matches!(ch, '-' | '+' | '*')
         {
             return self.peek_char(1) == Some(' ');

@@ -125,3 +125,60 @@ fn lexer_multiline_code_span_tokenizes_as_single_code_span() {
         "Lexer should tokenize multiline inline code as a single CodeSpan"
     );
 }
+
+#[test]
+fn lexer_list_marker_bol_only() {
+    let input = "foo - bar\n- item\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    let expected = vec![
+        crate::syntax::SyntaxKind::TEXT,       // foo
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // -
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // bar
+        crate::syntax::SyntaxKind::NEWLINE,    //
+        crate::syntax::SyntaxKind::ListMarker, // -
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // item
+        crate::syntax::SyntaxKind::NEWLINE,    //
+    ];
+    assert_eq!(kinds, expected, "Only BOL '-' should be ListMarker");
+}
+
+#[test]
+fn lexer_nested_list_tokens() {
+    let input = "- Top level\n  - Nested level 1\n    - Nested level 2\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    let expected = vec![
+        crate::syntax::SyntaxKind::ListMarker, // -
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // Top
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // level
+        crate::syntax::SyntaxKind::NEWLINE,
+        crate::syntax::SyntaxKind::WHITESPACE, // (indent)
+        crate::syntax::SyntaxKind::ListMarker, // -
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // Nested
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // level
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // 1
+        crate::syntax::SyntaxKind::NEWLINE,
+        crate::syntax::SyntaxKind::WHITESPACE, // (indent)
+        crate::syntax::SyntaxKind::ListMarker, // -
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // Nested
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // level
+        crate::syntax::SyntaxKind::WHITESPACE,
+        crate::syntax::SyntaxKind::TEXT, // 2
+        crate::syntax::SyntaxKind::NEWLINE,
+    ];
+    assert_eq!(
+        kinds, expected,
+        "Lexer should tokenize nested list markers and indentation correctly"
+    );
+}
