@@ -5,22 +5,29 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+fn default_line_width() -> usize {
+    80
+}
+fn default_math_indent() -> usize {
+    0
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    #[serde(default)]
-    pub line_width: Option<usize>,
+    #[serde(default = "default_line_width")]
+    pub line_width: usize,
     #[serde(default)]
     pub wrap: Option<WrapMode>,
-    #[serde(default)]
-    pub math_indent: Option<usize>,
+    #[serde(default = "default_math_indent")]
+    pub math_indent: usize,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            line_width: Some(80),
+            line_width: default_line_width(),
             wrap: None,
-            math_indent: Some(0),
+            math_indent: default_math_indent(),
         }
     }
 }
@@ -32,19 +39,21 @@ pub struct ConfigBuilder {
 
 impl ConfigBuilder {
     pub fn math_indent(mut self, indent: usize) -> Self {
-        self.config.math_indent = Some(indent);
+        self.config.math_indent = indent;
         self
     }
+
     pub fn line_width(mut self, width: usize) -> Self {
-        self.config.line_width = Some(width);
+        self.config.line_width = width;
         self
     }
+
     pub fn build(self) -> Config {
         self.config
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum WrapMode {
     Off,
@@ -123,4 +132,14 @@ pub fn load(explicit: Option<&Path>, start_dir: &Path) -> io::Result<(Config, Op
     }
 
     Ok((Config::default(), None))
+}
+
+#[test]
+fn config_missing_fields_panics_on_unwrap() {
+    let toml_str = r#"
+        wrap = "soft"
+    "#;
+    let cfg = toml::from_str::<Config>(toml_str).expect("Should parse config");
+    let line_width = cfg.line_width; // This will panic and fail the test
+    assert_eq!(line_width, 80);
 }
