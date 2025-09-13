@@ -260,9 +260,9 @@ impl<'a> Lexer<'a> {
             }
 
             '$' => {
-                // Detect block math ($$ at start of line or after newline)
+                // Detect block math: 2 or more $ at start of line or after newline
                 let dollar_count = self.advance_while(|c| c == '$');
-                let is_block_math = dollar_count == 2;
+                let is_block_math = dollar_count >= 2;
                 if is_block_math {
                     Some(Token {
                         kind: SyntaxKind::BlockMathMarker,
@@ -527,5 +527,24 @@ fn lexer_comment_end_bug() {
         kinds,
         vec![SyntaxKind::CommentEnd],
         "Lexer should produce CommentEnd for '-->'"
+    );
+}
+
+#[test]
+fn lexer_triple_dollar_block_math() {
+    let input = "$$$\nf(x)=x^2\n$$$\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    assert_eq!(
+        kinds,
+        vec![
+            SyntaxKind::BlockMathMarker, // $$$
+            SyntaxKind::NEWLINE,         //
+            SyntaxKind::TEXT,            // f(x)=x^2
+            SyntaxKind::NEWLINE,         //
+            SyntaxKind::BlockMathMarker, // $$$
+            SyntaxKind::NEWLINE,         //
+        ],
+        "Lexer should treat $$$ as BlockMathMarker"
     );
 }
