@@ -548,3 +548,18 @@ fn lexer_triple_dollar_block_math() {
         "Lexer should treat $$$ as BlockMathMarker"
     );
 }
+
+#[test]
+fn lexer_escaped_dollar_is_text() {
+    let input = r#"foo \$ bar $baz$"#;
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    assert!(
+        kinds.contains(&SyntaxKind::TEXT),
+        "Escaped dollar should be TEXT"
+    );
+    assert!(
+        kinds.contains(&SyntaxKind::InlineMathMarker),
+        "Unescaped $ should be InlineMathMarker"
+    );
+}
