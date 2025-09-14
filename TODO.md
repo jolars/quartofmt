@@ -27,7 +27,6 @@ Formatter improvements
 
 Parser/lexer coverage to add
 
-- Inline code `...` and code spans with backticks of varying lengths; ensure no math/link parsing inside.
 - Links/images fully (closing ’]’, ’(…)’), autolinks, and reference-style links. Or at least treat [..](..) as atomic for wrapping.
 - HTML blocks and inline HTML beyond comments.
 - Headings, ATX/Setext.
@@ -38,15 +37,14 @@ Parser/lexer coverage to add
 
 Testing and quality
 
-- Golden tests: input -> expected output; idempotency tests (format twice == once).
+- idempotency tests (format twice == once).
 - Fuzzing (cargo-fuzz) and corpus from Quarto docs.
 - Property tests for tokenization invariants (concatenated token text == input).
-- CI with cargo test + clippy + fmt; add a few big documents for performance smoke tests.
+- add a few big documents for performance smoke tests.
 
 Config/CLI/editor integration
 
 - Provide CLI: quartofmt [--check] [--write] [--config PATH] [--stdin|PATHS].
-- Config precedence is good; add merge-with-defaults and document keys. Consider non-Option fields with serde defaults.
 - Neovim: expose a robust CLI with --stdin --stdout for formatprg or provide an LSP/formatter endpoint.
 
 Architecture polish
@@ -61,15 +59,4 @@ Performance
 
 Small targeted fixes to prioritize
 
-- Fix comment end tokenization.
-- Implement config default merging or non-Option serde defaults.
 - Restrict list marker lexing to BOL.
-- Handle $$$ and escaped \$ minimally.
-- Reduce panics in release builds.
-
-With these, you’ll get a more robust formatter that preserves semantics while reflowing text predictably, and you’ll be set up to extend coverage to the rest of Quarto/Markdown constructs.
-
-## User (c5ab8e90-54f2-4948-93b9-5847d9d3184a)───
-
-> #buffers:listed
-> $gpt-5
