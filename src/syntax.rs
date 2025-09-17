@@ -48,8 +48,8 @@ pub enum SyntaxKind {
     // Headings
     Heading,
     HeadingContent,
-    AtxHeadingMarker,        // leading #####
-    SetextHeadingUnderline,  // ===== or -----
+    AtxHeadingMarker,       // leading #####
+    SetextHeadingUnderline, // ===== or -----
 
     // LaTeX environments
     LatexCommand, // \command{...}
