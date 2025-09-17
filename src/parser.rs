@@ -349,10 +349,10 @@ impl<'a> Parser<'a> {
         // Div content (include nested divs until matching fence length)
         self.builder.start_node(SyntaxKind::DivContent.into());
         self.parse_blocks(|p| {
-            if p.at(SyntaxKind::DivMarker) {
-                if let Some(tok) = p.current_token() {
-                    return tok.len == open_len;
-                }
+            if p.at(SyntaxKind::DivMarker)
+                && let Some(tok) = p.current_token()
+            {
+                return tok.len == open_len;
             }
             false
         });

@@ -253,11 +253,12 @@ impl Formatter {
                 self.output.push_str(&content);
                 self.output.push('\n');
 
-                 if let Some(next) = node.next_sibling() {
-                     if is_block_element(next.kind()) && !self.output.ends_with("\n\n") {
-                         self.output.push('\n');
-                     }
-                 }
+                if let Some(next) = node.next_sibling()
+                    && is_block_element(next.kind())
+                    && !self.output.ends_with("\n\n")
+                {
+                    self.output.push('\n');
+                }
             }
 
             SyntaxKind::LatexEnvironment => {
@@ -397,11 +398,11 @@ impl Formatter {
                 // Build words from the whole node, then drop the leading marker word
                 let mut arena: Vec<Box<str>> = Vec::new();
                 let mut words = self.build_words(node, &mut arena);
-                if let Some(first) = words.first() {
-                    if first.word == marker {
-                        // Remove the marker; we will print it ourselves with a following space
-                        words.remove(0);
-                    }
+                if let Some(first) = words.first()
+                    && first.word == marker
+                {
+                    // Remove the marker; we will print it ourselves with a following space
+                    words.remove(0);
                 }
 
                 let algo = WrapAlgorithm::new();
