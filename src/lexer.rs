@@ -84,12 +84,12 @@ impl<'a> Lexer<'a> {
         let mut iterations = 0;
         while let Some(ch) = self.current_char() {
             iterations += 1;
-            if iterations > 1000 {
-                panic!(
-                    "Infinite loop in advance_while! pos: {}, char: {:?}",
-                    self.pos, ch
-                );
-            }
+            debug_assert!(
+                iterations <= 1000,
+                "Infinite loop in advance_while! pos: {}, char: {:?}",
+                self.pos,
+                ch
+            );
             if predicate(ch) {
                 self.advance();
             } else {
@@ -527,6 +527,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
+
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut lexer = Lexer::new(input);
     let mut tokens = Vec::new();
@@ -534,12 +535,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
     while let Some(token) = lexer.next_token() {
         iterations += 1;
-        if iterations > 10000 {
-            panic!(
-                "Too many iterations in tokenizer! Input: {:?}, pos: {}",
-                input, lexer.pos
-            );
-        }
+        debug_assert!(
+            iterations <= 10000,
+            "Too many iterations in tokenizer! Input: {:?}, pos: {}",
+            input,
+            lexer.pos
+        );
         log::trace!(
             "Token {}: {:?} (len: {})",
             iterations,
@@ -552,6 +553,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     log::debug!("Tokenization complete. {} tokens generated.", tokens.len());
     tokens
 }
+
 
 #[cfg(test)]
 mod tests;

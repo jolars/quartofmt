@@ -80,6 +80,7 @@ impl<'a> Parser<'a> {
         self.pos >= self.tokens.len()
     }
 
+    
     fn parse_document(&mut self) {
         self.builder.start_node(SyntaxKind::DOCUMENT.into());
 
@@ -93,14 +94,24 @@ impl<'a> Parser<'a> {
             self.parse_frontmatter();
         }
 
+        // Parse the rest of the top-level blocks until EOF
+        self.parse_blocks(|_| false);
+
+        self.builder.finish_node();
+    }
+
+    fn parse_blocks<F>(&mut self, stop: F)
+    where
+        F: Fn(&Parser) -> bool,
+    {
         let mut iterations = 0;
-        while !self.at_eof() {
+        while !self.at_eof() && !stop(self) {
             iterations += 1;
             #[cfg(debug_assertions)]
             {
                 if iterations > 1000 {
                     panic!(
-                        "Too many iterations in parse_document! Current token: {:?} at pos {pos}",
+                        "Too many iterations in parse_blocks! Current token: {:?} at pos {pos}",
                         self.current_token(),
                         pos = self.pos
                     );
@@ -108,7 +119,7 @@ impl<'a> Parser<'a> {
             }
 
             log::trace!(
-                "Parse iteration {iterations}: pos={}, token={:?}",
+                "parse_blocks iteration {iterations}: pos={}, token={:?}",
                 self.pos,
                 self.current_token()
             );
@@ -147,15 +158,14 @@ impl<'a> Parser<'a> {
             // Safety check: ensure we always advance
             if self.pos == old_pos && !self.at_eof() {
                 panic!(
-                    "Parser stuck! Not advancing from pos {} with token {:?}",
+                    "Parser stuck in parse_blocks! Not advancing from pos {} with token {:?}",
                     self.pos,
                     self.current_token()
                 );
             }
         }
-
-        self.builder.finish_node();
     }
+
 
     fn parse_frontmatter(&mut self) {
         self.builder.start_node(SyntaxKind::FRONTMATTER.into());
@@ -306,20 +316,14 @@ impl<'a> Parser<'a> {
 
         // Div content (include nested divs until matching fence length)
         self.builder.start_node(SyntaxKind::DivContent.into());
-        while !self.at_eof() {
-            if self.at(SyntaxKind::DivMarker)
-                && self.current_token().is_some_and(|tok| tok.len == open_len)
-            {
-                break;
+        self.parse_blocks(|p| {
+            if p.at(SyntaxKind::DivMarker) {
+                if let Some(tok) = p.current_token() {
+                    return tok.len == open_len;
+                }
             }
-            // Recursively parse document content inside the div
-            let old_pos = self.pos;
-            self.parse_document();
-            if self.pos == old_pos {
-                // Safety: always advance at least one token to avoid infinite loop
-                self.advance();
-            }
-        }
+            false
+        });
         self.builder.finish_node();
 
         // Closing fence matching opening length
