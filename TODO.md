@@ -1,23 +1,7 @@
-Immediate correctness fixes
+# Quarto formatter TODO
 
-- Panic guards: advance_while() and tokenize() iteration caps will panic on
-  long inputs. Remove in release builds or convert to debug_assert!/logging.
-- Fenced div parsing: parse_fenced_div() calls parse_document(), which nests
-  DOCUMENT nodes inside div content; formatter compensates but it’s awkward. Add
-  a parse_blocks() that parses a sequence of blocks without wrapping in DOCUMENT.
+## Formatter improvements
 
-Formatter improvements
-
-- Wrap mode config is unused. Implement:
-  - Off: preserve paragraph whitespace/newlines.
-  - Soft: current wrapping behavior.
-  - Hard: also break overlong tokens.
-- Paragraph formatting currently uses node.text() and normalizes whitespace
-  across everything, which can mangle inline constructs (links, inline code,
-  inline math, LaTeX commands). Prefer walking children tokens:
-  - Keep inline spans (InlineMath, LatexCommand, links, images, inline code) as
-    atomic units when reflowing.
-  - Only collapse/rewrap TEXT and WHITESPACE between inline spans.
 - Lists: Current ListItem formatting derives marker/indent from raw text;
   fragile for numbered lists and nested mixes. Use the parsed structure (e.g.,
   capture marker and following space as explicit tokens/nodes) so you can compute
@@ -25,9 +9,8 @@ Formatter improvements
 - Avoid emitting extra trailing newlines (audit nodes that push a newline
   unconditionally).
 
-Parser/lexer coverage to add
+## Parser/lexer coverage to add
 
-- Links/images fully (closing ’]’, ’(…)’), autolinks, and reference-style links. Or at least treat [..](..) as atomic for wrapping.
 - HTML blocks and inline HTML beyond comments.
 - Headings, ATX/Setext.
 - Thematic breaks (---, \*\*\*, \_\_\_) vs table underlines.
@@ -35,28 +18,45 @@ Parser/lexer coverage to add
 - Block quotes with nested lists/code blocks.
 - Escapes and entities.
 
-Testing and quality
+## Testing and quality
 
-- idempotency tests (format twice == once).
 - Fuzzing (cargo-fuzz) and corpus from Quarto docs.
 - Property tests for tokenization invariants (concatenated token text == input).
 - add a few big documents for performance smoke tests.
 
-Config/CLI/editor integration
+## Config/CLI/editor integration
 
 - Provide CLI: quartofmt [--check] [--write] [--config PATH] [--stdin|PATHS].
 - Neovim: expose a robust CLI with --stdin --stdout for formatprg or provide an LSP/formatter endpoint.
 
-Architecture polish
+## Architecture polish
 
-- Split parse_document() into parse_blocks() + parse_document() (outer wrapper).
 - Keep DivInfo node (you defined it) and populate it; same for CodeInfo vs including newline in fence nodes.
-- Expose resolved config getters to avoid unwraps.
 
-Performance
+## Performance
 
 - Benchmark wrapping and parsing on large files (cargo bench); preallocate buffers based on input size.
 
-Small targeted fixes to prioritize
+## What to fix next (priority)
 
-- Restrict list marker lexing to BOL.
+4) List structure improvements
+- Parser: in ListItem, emit explicit children:
+  - ListIndent (WHITESPACE before marker)
+  - ListMarker (including “1.”/“-”/“+”/“*”)
+  - MarkerSpace (the one space after marker)
+  - ItemContent (rest of the line plus continuations)
+- Formatter: compute hanging indent from ListIndent + ListMarker + MarkerSpace and wrap ItemContent accordingly; support nested lists and ordered markers.
+- Rationale: fixes fragility for complex/nested lists and removes heuristic scanning.
+
+5) Populate DivInfo and stop including newline in fence nodes
+- DivFenceOpen: DivMarker + DivInfo + NEWLINE (newline outside the DivInfo).
+- CodeFenceOpen already has CodeInfo but includes the newline; move the newline out for consistency.
+- Formatter: update to read DivInfo/CodeInfo cleanly.
+- Rationale: cleaner CST and easier formatting.
+
+7) Coverage follow-ups (incremental)
+- Headings and thematic breaks (and their ambiguity with tables).
+- HTML blocks/inline beyond comments.
+- List continuation lines and mixed nested lists.
+- Block quotes containing lists and code blocks.
+- Escapes/entities in lexer.
