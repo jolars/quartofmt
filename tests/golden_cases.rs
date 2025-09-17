@@ -28,6 +28,15 @@ fn golden_cases() {
         let input = normalize(&fs::read_to_string(&input_path).unwrap());
         let output = format(&input, None);
 
+        // Idempotency: formatting twice should equal once
+        let output_twice = format(&output, None);
+        similar_asserts::assert_eq!(
+            output,
+            output_twice,
+            "idempotency: {}",
+            dir.file_name().unwrap().to_string_lossy()
+        );
+
         if update {
             fs::write(&expected_path, &output).unwrap();
             continue;
