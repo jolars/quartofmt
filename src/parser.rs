@@ -62,6 +62,14 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // Advance one token without emitting it into the CST
+    fn skip_token(&mut self) {
+        if let Some(token) = self.current_token().cloned() {
+            self.byte_offset += token.len;
+            self.pos += 1;
+        }
+    }
+
     fn at(&self, kind: SyntaxKind) -> bool {
         self.current_token()
             .map(|token| token.kind == kind)
@@ -420,40 +428,54 @@ impl<'a> Parser<'a> {
         self.builder.start_node(SyntaxKind::BlockQuote.into());
 
         while !self.at_eof() && self.at(SyntaxKind::BlockQuoteMarker) {
-            // Skip the > marker but don't include it in content
-            self.advance(); // consume >
-
-            // Skip optional whitespace after >
+            // Consume the initial '>' and optional whitespace
+            self.advance(); // '>'
             if self.at(SyntaxKind::WHITESPACE) {
                 self.advance();
             }
 
-            // Check if this is a blank quote line (just > followed by newline)
+            // Blank quote line: just emit a BlankLine node
             if self.at(SyntaxKind::NEWLINE) {
-                // This is a blank line in the quote - parse as blank line
                 self.builder.start_node(SyntaxKind::BlankLine.into());
                 self.advance(); // consume newline
                 self.builder.finish_node();
                 continue;
             }
 
-            // Parse content as a paragraph within the block quote
+            // Start a single paragraph that may span multiple quoted lines
             self.builder.start_node(SyntaxKind::PARAGRAPH.into());
 
-            // Collect content until end of line
-            while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
-                self.advance();
-            }
+            loop {
+                // Consume content until end of line
+                while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+                    self.advance();
+                }
+                // Include the newline inside the paragraph so it becomes space when formatted
+                if self.at(SyntaxKind::NEWLINE) {
+                    self.advance();
+                }
 
-            // Consume the newline
-            if self.at(SyntaxKind::NEWLINE) {
-                self.advance();
-            }
+                // If the next line continues the quote, consume its marker and optional space
+                if self.at(SyntaxKind::BlockQuoteMarker) {
+                    // Consume '>' and optional following whitespace WITHOUT emitting
+                    self.skip_token(); // '>'
+                    if self.at(SyntaxKind::WHITESPACE) {
+                        self.skip_token();
+                    }
+                    // If it's a blank quoted line, end the paragraph and emit a BlankLine
+                    if self.at(SyntaxKind::NEWLINE) {
+                        self.builder.finish_node(); // end paragraph
+                        self.builder.start_node(SyntaxKind::BlankLine.into());
+                        self.advance(); // consume newline (emit)
+                        self.builder.finish_node();
+                        break;
+                    }
+                    // Continue accumulating into the same paragraph
+                    continue;
+                }
 
-            self.builder.finish_node(); // end paragraph
-
-            // Check if next line continues the quote or if we should break
-            if !self.at(SyntaxKind::BlockQuoteMarker) {
+                // Next line is not quoted: finish this paragraph
+                self.builder.finish_node();
                 break;
             }
         }
