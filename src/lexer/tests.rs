@@ -264,3 +264,13 @@ fn lexer_setext_heading_equals() {
     assert_eq!(*k, SyntaxKind::TEXT);
     assert!(!s.is_empty() && s.chars().all(|c| c == '='));
 }
+
+#[test]
+fn lexer_does_not_treat_hash_number_as_heading() {
+    let input = "I like several of their flavors of ice cream:\n#22, for example, and #5.\n";
+    let tokens = tokenize(input);
+    // Find the token for "#22"
+    let hash_token = tokens.iter().find(|t| t.kind == SyntaxKind::TEXT).unwrap();
+    // It should be TEXT, not a heading marker
+    assert_eq!(hash_token.kind, SyntaxKind::TEXT);
+}
