@@ -56,9 +56,8 @@ impl ConfigBuilder {
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum WrapMode {
-    Off,
-    Soft,
-    Hard,
+    Preserve,
+    Reflow,
 }
 
 const CANDIDATE_NAMES: &[&str] = &[".quartofmt.toml", "quartofmt.toml"];
@@ -137,7 +136,7 @@ pub fn load(explicit: Option<&Path>, start_dir: &Path) -> io::Result<(Config, Op
 #[test]
 fn config_missing_fields_panics_on_unwrap() {
     let toml_str = r#"
-        wrap = "soft"
+        wrap = "reflow"
     "#;
     let cfg = toml::from_str::<Config>(toml_str).expect("Should parse config");
     let line_width = cfg.line_width; // This will panic and fail the test

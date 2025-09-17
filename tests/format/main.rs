@@ -10,3 +10,4 @@ mod paragraphs;
 mod quotes;
 mod tables_simple;
 mod tex;
+mod preserve_wrap;

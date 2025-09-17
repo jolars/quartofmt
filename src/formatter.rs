@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::config::WrapMode;
 use crate::syntax::{SyntaxKind, SyntaxNode};
 
 use rowan::NodeOrToken;
@@ -223,15 +224,29 @@ impl Formatter {
 
             SyntaxKind::BlockQuote => {
                 // Format children (paragraphs, blank lines) with > prefix
+                let wrap_mode = self.config.wrap.clone().unwrap_or(WrapMode::Reflow);
+
                 for child in node.children() {
                     match child.kind() {
                         SyntaxKind::PARAGRAPH => {
-                            let width = line_width.saturating_sub(2);
-                            let lines = self.wrapped_lines_for_paragraph(&child, width);
-                            for line in lines {
-                                self.output.push_str("> ");
-                                self.output.push_str(&line);
-                                self.output.push('\n');
+                            match wrap_mode {
+                                WrapMode::Preserve => {
+                                    let text = child.text().to_string();
+                                    for line in text.lines() {
+                                        self.output.push_str("> ");
+                                        self.output.push_str(line);
+                                        self.output.push('\n');
+                                    }
+                                }
+                                WrapMode::Reflow => {
+                                    let width = self.config.line_width.saturating_sub(2);
+                                    let lines = self.wrapped_lines_for_paragraph(&child, width);
+                                    for line in lines {
+                                        self.output.push_str("> ");
+                                        self.output.push_str(&line);
+                                        self.output.push('\n');
+                                    }
+                                }
                             }
                         }
                         SyntaxKind::BlankLine => {
@@ -246,15 +261,27 @@ impl Formatter {
             }
 
             SyntaxKind::PARAGRAPH => {
-                let lines = self.wrapped_lines_for_paragraph(node, line_width);
-                for (i, line) in lines.iter().enumerate() {
-                    if i > 0 {
-                        self.output.push('\n');
+                let wrap_mode = self.config.wrap.clone().unwrap_or(WrapMode::Reflow);
+                match wrap_mode {
+                    WrapMode::Preserve => {
+                        let text = node.text().to_string();
+                        self.output.push_str(&text);
+                        if !self.output.ends_with('\n') {
+                            self.output.push('\n');
+                        }
                     }
-                    self.output.push_str(line);
-                }
-                if !self.output.ends_with('\n') {
-                    self.output.push('\n');
+                    WrapMode::Reflow => {
+                        let lines = self.wrapped_lines_for_paragraph(node, line_width);
+                        for (i, line) in lines.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push('\n');
+                            }
+                            self.output.push_str(line);
+                        }
+                        if !self.output.ends_with('\n') {
+                            self.output.push('\n');
+                        }
+                    }
                 }
             }
 
