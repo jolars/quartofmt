@@ -115,7 +115,6 @@ impl<'a> Parser<'a> {
             match self.current_token().map(|t| t.kind) {
                 Some(SyntaxKind::CodeFenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
-                Some(SyntaxKind::InlineMathMarker) => self.parse_inline_math(),
                 Some(SyntaxKind::BlockMathMarker) => self.parse_block_math(),
                 Some(SyntaxKind::CommentStart) => self.parse_comment(),
                 Some(SyntaxKind::LatexCommand) if self.is_standalone_latex_command() => {
@@ -587,6 +586,12 @@ impl<'a> Parser<'a> {
                 ) => {
                     log::trace!("Breaking paragraph on fence/div/math marker");
                     break;
+                }
+
+                // Keep inline math inside the paragraph
+                Some(SyntaxKind::InlineMathMarker) => {
+                    log::trace!("Paragraph: parsing inline math");
+                    self.parse_inline_math();
                 }
 
                 Some(SyntaxKind::WHITESPACE) => {
