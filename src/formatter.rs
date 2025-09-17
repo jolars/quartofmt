@@ -71,7 +71,7 @@ impl Formatter {
                         }
                         let mut acc = String::new();
                         acc.push_str(t.text());
-                        while let Some(next) = it.next() {
+                        for next in it.by_ref() {
                             match next {
                                 rowan::NodeOrToken::Token(nt) => {
                                     acc.push_str(nt.text());
