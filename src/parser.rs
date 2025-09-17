@@ -49,6 +49,12 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn token_text(&self, idx: usize) -> &str {
+        let start = self.tokens[..idx].iter().map(|t| t.len).sum::<usize>();
+        let end = start + self.tokens[idx].len;
+        &self.input[start..end]
+    }
+
     fn advance(&mut self) {
         let token_opt = self.current_token().cloned();
         if let Some(token) = token_opt {
@@ -80,7 +86,22 @@ impl<'a> Parser<'a> {
         self.pos >= self.tokens.len()
     }
 
-    
+    fn at_bol(&self) -> bool {
+        if self.pos == 0 {
+            return true;
+        }
+        // previous non-whitespace token is NEWLINE
+        let mut i = self.pos;
+        while i > 0 && self.tokens[i - 1].kind == SyntaxKind::WHITESPACE {
+            i -= 1;
+        }
+        if i == 0 {
+            true
+        } else {
+            self.tokens[i - 1].kind == SyntaxKind::NEWLINE
+        }
+    }
+
     fn parse_document(&mut self) {
         self.builder.start_node(SyntaxKind::DOCUMENT.into());
 
@@ -126,6 +147,18 @@ impl<'a> Parser<'a> {
 
             let old_pos = self.pos;
 
+            // Headings first
+            if self.is_atx_heading_start() {
+                self.parse_atx_heading();
+                continue;
+            }
+
+            if self.is_setext_heading_start() {
+                self.parse_setext_heading();
+                continue;
+            }
+
+            // Tables
             if self.is_simple_table_start() {
                 self.parse_simple_table();
                 continue;
@@ -165,7 +198,6 @@ impl<'a> Parser<'a> {
             }
         }
     }
-
 
     fn parse_frontmatter(&mut self) {
         self.builder.start_node(SyntaxKind::FRONTMATTER.into());
@@ -459,9 +491,8 @@ impl<'a> Parser<'a> {
                     self.advance();
                 }
 
-                // If the next line continues the quote, consume its marker and optional space
+                // If the next line continues the quote, consume its marker and optional space WITHOUT emitting
                 if self.at(SyntaxKind::BlockQuoteMarker) {
-                    // Consume '>' and optional following whitespace WITHOUT emitting
                     self.skip_token(); // '>'
                     if self.at(SyntaxKind::WHITESPACE) {
                         self.skip_token();
@@ -855,6 +886,167 @@ impl<'a> Parser<'a> {
 
         // Start of file before any content => leading blank line
         true
+    }
+
+    fn is_atx_heading_start(&self) -> bool {
+        if !self.at_bol() {
+            return false;
+        }
+        let mut pos = self.pos;
+
+        // Allow up to 3 leading spaces
+        let mut leading_ws = 0;
+        while pos < self.tokens.len() && self.tokens[pos].kind == SyntaxKind::WHITESPACE {
+            leading_ws += self.tokens[pos].len;
+            if leading_ws > 3 {
+                return false;
+            }
+            pos += 1;
+        }
+
+        if pos >= self.tokens.len() || self.tokens[pos].kind != SyntaxKind::TEXT {
+            return false;
+        }
+        let t = self.token_text(pos);
+        let hashes = t.chars().take_while(|&c| c == '#').count();
+        if hashes == 0 || hashes > 6 || hashes != t.chars().count() {
+            return false;
+        }
+
+        // Require a space after the opening hashes
+        if pos + 1 >= self.tokens.len() || self.tokens[pos + 1].kind != SyntaxKind::WHITESPACE {
+            return false;
+        }
+
+        true
+    }
+
+    fn is_setext_heading_start(&self) -> bool {
+        if !self.at_bol() {
+            return false;
+        }
+        // First line: some text (not empty)
+        let mut pos = self.pos;
+        let mut saw_text = false;
+        while pos < self.tokens.len() {
+            match self.tokens[pos].kind {
+                SyntaxKind::NEWLINE => {
+                    pos += 1;
+                    break;
+                }
+                SyntaxKind::TEXT
+                | SyntaxKind::WHITESPACE
+                | SyntaxKind::LatexCommand
+                | SyntaxKind::Link
+                | SyntaxKind::ImageLink => {
+                    // basic allowance of inline things
+                    if self.tokens[pos].kind == SyntaxKind::TEXT {
+                        // Any non-empty text counts
+                        if !self.token_text(pos).trim().is_empty() {
+                            saw_text = true;
+                        }
+                    }
+                    pos += 1;
+                }
+                _ => return false,
+            }
+        }
+        if !saw_text {
+            return false;
+        }
+
+        // Second line: TEXT token of only '=' or '-' (no spaces inside), then optional whitespace, then NEWLINE
+        if pos >= self.tokens.len() || self.tokens[pos].kind != SyntaxKind::TEXT {
+            return false;
+        }
+        let underline = self.token_text(pos);
+        if underline.is_empty() || !underline.chars().all(|c| c == '=' || c == '-') {
+            return false;
+        }
+        // Determine level
+        let level = if underline.starts_with('=') { 1 } else { 2 };
+        // Mixed chars not allowed
+        if (level == 1 && underline.chars().any(|c| c != '='))
+            || (level == 2 && underline.chars().any(|c| c != '-'))
+        {
+            return false;
+        }
+        // Next must be NEWLINE or WHITESPACE then NEWLINE
+        let mut p2 = pos + 1;
+        if p2 < self.tokens.len() && self.tokens[p2].kind == SyntaxKind::WHITESPACE {
+            p2 += 1;
+        }
+        if p2 >= self.tokens.len() || self.tokens[p2].kind != SyntaxKind::NEWLINE {
+            return false;
+        }
+
+        true
+    }
+
+    fn parse_atx_heading(&mut self) {
+        self.builder.start_node(SyntaxKind::Heading.into());
+
+        // Optional leading spaces (up to 3)
+        while self.at(SyntaxKind::WHITESPACE) && self.current_token().unwrap().len <= 3 {
+            self.advance();
+        }
+
+        // Marker
+        if self.at(SyntaxKind::TEXT) {
+            self.builder.start_node(SyntaxKind::AtxHeadingMarker.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+        // One space
+        if self.at(SyntaxKind::WHITESPACE) {
+            self.advance();
+        }
+
+        // Content until end of line (we'll later ignore trailing closing hashes in formatter)
+        self.builder.start_node(SyntaxKind::HeadingContent.into());
+        while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+            self.advance();
+        }
+        self.builder.finish_node();
+
+        if self.at(SyntaxKind::NEWLINE) {
+            self.advance();
+        }
+
+        self.builder.finish_node();
+    }
+
+    fn parse_setext_heading(&mut self) {
+        self.builder.start_node(SyntaxKind::Heading.into());
+
+        // First line: content
+        self.builder.start_node(SyntaxKind::HeadingContent.into());
+        while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+            self.advance();
+        }
+        self.builder.finish_node();
+
+        if self.at(SyntaxKind::NEWLINE) {
+            self.advance();
+        }
+
+        // Second line: underline marker
+        if self.at(SyntaxKind::TEXT) {
+            self.builder
+                .start_node(SyntaxKind::SetextHeadingUnderline.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+        // Optional trailing whitespace
+        if self.at(SyntaxKind::WHITESPACE) {
+            self.advance();
+        }
+        // End of underline line
+        if self.at(SyntaxKind::NEWLINE) {
+            self.advance();
+        }
+
+        self.builder.finish_node();
     }
 
     fn debug_tokens(&self) {

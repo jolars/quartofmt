@@ -1,5 +1,4 @@
-use crate::config::Config;
-use crate::config::WrapMode;
+use crate::config::{Config, WrapMode};
 use crate::syntax::{SyntaxKind, SyntaxNode};
 
 use rowan::NodeOrToken;
@@ -198,6 +197,51 @@ impl Formatter {
                 }
             }
 
+            SyntaxKind::Heading => {
+                // Determine level
+                let mut level = 1;
+                let mut content = String::new();
+                let mut saw_content = false;
+
+                for child in node.children() {
+                    match child.kind() {
+                        SyntaxKind::AtxHeadingMarker => {
+                            let t = child.text().to_string();
+                            level = t.chars().take_while(|&c| c == '#').count().clamp(1, 6);
+                        }
+                        SyntaxKind::SetextHeadingUnderline => {
+                            let t = child.text().to_string();
+                            if t.chars().all(|c| c == '=') {
+                                level = 1;
+                            } else {
+                                level = 2;
+                            }
+                        }
+                        SyntaxKind::HeadingContent => {
+                            let mut t = child.text().to_string();
+                            // Trim trailing spaces and closing hashes in ATX form
+                            t = t.trim_end().to_string();
+                            // Remove trailing " ###" if present
+                            let trimmed_hash = t.trim_end_matches('#').to_string();
+                            if trimmed_hash.len() != t.len() {
+                                t = trimmed_hash.trim_end().to_string();
+                            }
+                            // Normalize internal newlines
+                            content = t.trim().to_string();
+                            saw_content = true;
+                        }
+                        _ => {}
+                    }
+                }
+                if !saw_content {
+                    content = node.text().to_string();
+                }
+                self.output.push_str(&"#".repeat(level));
+                self.output.push(' ');
+                self.output.push_str(&content);
+                self.output.push('\n');
+            }
+
             SyntaxKind::LatexEnvironment => {
                 // // Output the environment exactly as written
                 let text = node.text().to_string();
@@ -228,27 +272,25 @@ impl Formatter {
 
                 for child in node.children() {
                     match child.kind() {
-                        SyntaxKind::PARAGRAPH => {
-                            match wrap_mode {
-                                WrapMode::Preserve => {
-                                    let text = child.text().to_string();
-                                    for line in text.lines() {
-                                        self.output.push_str("> ");
-                                        self.output.push_str(line);
-                                        self.output.push('\n');
-                                    }
-                                }
-                                WrapMode::Reflow => {
-                                    let width = self.config.line_width.saturating_sub(2);
-                                    let lines = self.wrapped_lines_for_paragraph(&child, width);
-                                    for line in lines {
-                                        self.output.push_str("> ");
-                                        self.output.push_str(&line);
-                                        self.output.push('\n');
-                                    }
+                        SyntaxKind::PARAGRAPH => match wrap_mode {
+                            WrapMode::Preserve => {
+                                let text = child.text().to_string();
+                                for line in text.lines() {
+                                    self.output.push_str("> ");
+                                    self.output.push_str(line);
+                                    self.output.push('\n');
                                 }
                             }
-                        }
+                            WrapMode::Reflow => {
+                                let width = self.config.line_width.saturating_sub(2);
+                                let lines = self.wrapped_lines_for_paragraph(&child, width);
+                                for line in lines {
+                                    self.output.push_str("> ");
+                                    self.output.push_str(&line);
+                                    self.output.push('\n');
+                                }
+                            }
+                        },
                         SyntaxKind::BlankLine => {
                             self.output.push_str(">\n");
                         }

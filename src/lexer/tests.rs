@@ -1,4 +1,17 @@
+use crate::lexer::tokenize;
 use crate::syntax::SyntaxKind;
+
+fn token_texts(input: &str) -> Vec<(SyntaxKind, String)> {
+    let tokens = tokenize(input);
+    let mut out = Vec::with_capacity(tokens.len());
+    let mut off = 0usize;
+    for t in tokens {
+        let s = &input[off..off + t.len];
+        out.push((t.kind, s.to_string()));
+        off += t.len;
+    }
+    out
+}
 
 #[test]
 fn lexer_math_block_tokens() {
@@ -181,4 +194,73 @@ fn lexer_nested_list_tokens() {
         kinds, expected,
         "Lexer should tokenize nested list markers and indentation correctly"
     );
+}
+
+#[test]
+fn lexer_atx_heading_tokens_basic() {
+    let input = "## A level-two heading\n";
+    let toks = token_texts(input);
+
+    assert!(!toks.is_empty());
+    // First token should be TEXT of only hashes
+    assert_eq!(toks[0].0, SyntaxKind::TEXT);
+    assert_eq!(toks[0].1, "##");
+
+    // Second token is a space
+    assert_eq!(toks[1].0, SyntaxKind::WHITESPACE);
+    assert_eq!(toks[1].1, " ");
+
+    // Last token should be NEWLINE
+    assert_eq!(toks.last().unwrap().0, SyntaxKind::NEWLINE);
+}
+
+#[test]
+fn lexer_atx_heading_with_trailing_hashes() {
+    let input = "### A level-three heading ###\n";
+    let toks = token_texts(input);
+
+    // First token should be TEXT of only hashes
+    assert_eq!(toks[0].0, SyntaxKind::TEXT);
+    assert_eq!(toks[0].1, "###");
+
+    // Ensure we got a NEWLINE at end
+    assert_eq!(toks.last().unwrap().0, SyntaxKind::NEWLINE);
+}
+
+#[test]
+fn lexer_setext_heading_dashes_not_frontmatter() {
+    let input = "A level-two heading\n-------------------\n";
+    let toks = token_texts(input);
+
+    // Ensure no FrontmatterDelim is produced for 5+ dashes
+    assert!(
+        toks.iter().all(|(k, _)| *k != SyntaxKind::FrontmatterDelim),
+        "setext underline should not be treated as frontmatter delimiter"
+    );
+
+    // Find the token after the first NEWLINE: it should be TEXT of only '-'
+    let mut i = 0usize;
+    while i < toks.len() && toks[i].0 != SyntaxKind::NEWLINE {
+        i += 1;
+    }
+    assert!(i + 1 < toks.len(), "expected tokens after first newline");
+    let (k, s) = (&toks[i + 1].0, toks[i + 1].1.trim().to_string());
+    assert_eq!(*k, SyntaxKind::TEXT);
+    assert!(!s.is_empty() && s.chars().all(|c| c == '-'));
+}
+
+#[test]
+fn lexer_setext_heading_equals() {
+    let input = "A level-one heading\n====================\n";
+    let toks = token_texts(input);
+
+    // Ensure token after first newline is TEXT of only '='
+    let mut i = 0usize;
+    while i < toks.len() && toks[i].0 != SyntaxKind::NEWLINE {
+        i += 1;
+    }
+    assert!(i + 1 < toks.len(), "expected tokens after first newline");
+    let (k, s) = (&toks[i + 1].0, toks[i + 1].1.trim().to_string());
+    assert_eq!(*k, SyntaxKind::TEXT);
+    assert!(!s.is_empty() && s.chars().all(|c| c == '='));
 }

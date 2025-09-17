@@ -527,7 +527,6 @@ impl<'a> Lexer<'a> {
     }
 }
 
-
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut lexer = Lexer::new(input);
     let mut tokens = Vec::new();
@@ -553,7 +552,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     log::debug!("Tokenization complete. {} tokens generated.", tokens.len());
     tokens
 }
-
 
 #[cfg(test)]
 mod tests;

@@ -45,6 +45,12 @@ pub enum SyntaxKind {
     ListItem,
     Comment,
 
+    // Headings
+    Heading,
+    HeadingContent,
+    AtxHeadingMarker,        // leading #####
+    SetextHeadingUnderline,  // ===== or -----
+
     // LaTeX environments
     LatexCommand, // \command{...}
     LatexEnvironment,
