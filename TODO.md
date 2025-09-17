@@ -12,7 +12,6 @@
 ## Parser/lexer coverage to add
 
 - HTML blocks and inline HTML beyond comments.
-- Headings, ATX/Setext.
 - Thematic breaks (---, \*\*\*, \_\_\_) vs table underlines.
 - Nested lists with mixed bullets and numbers; list continuation lines.
 - Block quotes with nested lists/code blocks.
@@ -39,23 +38,26 @@
 
 ## What to fix next (priority)
 
-4) List structure improvements
+4. List structure improvements
+
 - Parser: in ListItem, emit explicit children:
   - ListIndent (WHITESPACE before marker)
-  - ListMarker (including “1.”/“-”/“+”/“*”)
+  - ListMarker (including “1.”/“-”/“+”/“\*”)
   - MarkerSpace (the one space after marker)
   - ItemContent (rest of the line plus continuations)
 - Formatter: compute hanging indent from ListIndent + ListMarker + MarkerSpace and wrap ItemContent accordingly; support nested lists and ordered markers.
 - Rationale: fixes fragility for complex/nested lists and removes heuristic scanning.
 
-5) Populate DivInfo and stop including newline in fence nodes
+5. Populate DivInfo and stop including newline in fence nodes
+
 - DivFenceOpen: DivMarker + DivInfo + NEWLINE (newline outside the DivInfo).
 - CodeFenceOpen already has CodeInfo but includes the newline; move the newline out for consistency.
 - Formatter: update to read DivInfo/CodeInfo cleanly.
 - Rationale: cleaner CST and easier formatting.
 
-7) Coverage follow-ups (incremental)
-- Headings and thematic breaks (and their ambiguity with tables).
+7. Coverage follow-ups (incremental)
+
+- Thematic breaks (and their ambiguity with tables).
 - HTML blocks/inline beyond comments.
 - List continuation lines and mixed nested lists.
 - Block quotes containing lists and code blocks.
