@@ -9,6 +9,18 @@ pub struct Formatter {
     config: Config,
 }
 
+fn is_block_element(kind: SyntaxKind) -> bool {
+    matches!(
+        kind,
+        SyntaxKind::PARAGRAPH
+            | SyntaxKind::List
+            | SyntaxKind::BlockQuote
+            | SyntaxKind::MathBlock
+            | SyntaxKind::CodeBlock
+            | SyntaxKind::SimpleTable
+    )
+}
+
 impl Formatter {
     pub fn new(config: Config) -> Self {
         Self {
@@ -240,6 +252,12 @@ impl Formatter {
                 self.output.push(' ');
                 self.output.push_str(&content);
                 self.output.push('\n');
+
+                 if let Some(next) = node.next_sibling() {
+                     if is_block_element(next.kind()) && !self.output.ends_with("\n\n") {
+                         self.output.push('\n');
+                     }
+                 }
             }
 
             SyntaxKind::LatexEnvironment => {
