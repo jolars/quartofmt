@@ -1,6 +1,9 @@
 use crate::config::Config;
 use crate::syntax::{SyntaxKind, SyntaxNode};
 
+use rowan::NodeOrToken;
+use textwrap::wrap_algorithms::WrapAlgorithm;
+
 pub struct Formatter {
     output: String,
     config: Config,
@@ -14,20 +17,158 @@ impl Formatter {
         }
     }
 
-    fn wrap_text(&self, text: &str, width: usize) -> String {
-        if text.trim().is_empty() {
-            return String::new();
+    fn build_words<'a>(
+        &self,
+        node: &SyntaxNode,
+        arena: &'a mut Vec<Box<str>>,
+    ) -> Vec<textwrap::core::Word<'a>> {
+        let mut piece_idx: Vec<usize> = Vec::new();
+        let mut whitespace_after: Vec<bool> = Vec::new();
+        let mut last_piece_pos: Option<usize> = None;
+        let mut pending_space = false;
+
+        let mut it = node.children_with_tokens();
+        while let Some(el) = it.next() {
+            match el {
+                rowan::NodeOrToken::Token(t) => match t.kind() {
+                    crate::syntax::SyntaxKind::WHITESPACE | crate::syntax::SyntaxKind::NEWLINE => {
+                        pending_space = true;
+                    }
+                    crate::syntax::SyntaxKind::Link | crate::syntax::SyntaxKind::ImageLink => {
+                        if pending_space {
+                            if let Some(prev) = last_piece_pos {
+                                whitespace_after[prev] = true;
+                            }
+                            pending_space = false;
+                        }
+                        arena.push(Box::<str>::from(t.text()));
+                        let idx = arena.len() - 1;
+                        piece_idx.push(idx);
+                        whitespace_after.push(false);
+                        last_piece_pos = Some(piece_idx.len() - 1);
+                    }
+                    crate::syntax::SyntaxKind::TEXT
+                    | crate::syntax::SyntaxKind::LatexCommand
+                    | crate::syntax::SyntaxKind::CodeSpan => {
+                        if pending_space {
+                            if let Some(prev) = last_piece_pos {
+                                whitespace_after[prev] = true;
+                            }
+                            pending_space = false;
+                        }
+                        arena.push(Box::<str>::from(t.text()));
+                        let idx = arena.len() - 1;
+                        piece_idx.push(idx);
+                        whitespace_after.push(false);
+                        last_piece_pos = Some(piece_idx.len() - 1);
+                    }
+                    crate::syntax::SyntaxKind::InlineMathMarker => {
+                        if pending_space {
+                            if let Some(prev) = last_piece_pos {
+                                whitespace_after[prev] = true;
+                            }
+                            pending_space = false;
+                        }
+                        let mut acc = String::new();
+                        acc.push_str(t.text());
+                        while let Some(next) = it.next() {
+                            match next {
+                                rowan::NodeOrToken::Token(nt) => {
+                                    acc.push_str(nt.text());
+                                    if nt.kind() == crate::syntax::SyntaxKind::InlineMathMarker {
+                                        break;
+                                    }
+                                }
+                                rowan::NodeOrToken::Node(n) => {
+                                    acc.push_str(&n.text().to_string());
+                                }
+                            }
+                        }
+                        arena.push(acc.into_boxed_str());
+                        let idx = arena.len() - 1;
+                        piece_idx.push(idx);
+                        whitespace_after.push(false);
+                        last_piece_pos = Some(piece_idx.len() - 1);
+                    }
+                    _ => {
+                        if pending_space {
+                            if let Some(prev) = last_piece_pos {
+                                whitespace_after[prev] = true;
+                            }
+                            pending_space = false;
+                        }
+                        arena.push(Box::<str>::from(t.text()));
+                        let idx = arena.len() - 1;
+                        piece_idx.push(idx);
+                        whitespace_after.push(false);
+                        last_piece_pos = Some(piece_idx.len() - 1);
+                    }
+                },
+                rowan::NodeOrToken::Node(n) => match n.kind() {
+                    crate::syntax::SyntaxKind::InlineMath => {
+                        if pending_space {
+                            if let Some(prev) = last_piece_pos {
+                                whitespace_after[prev] = true;
+                            }
+                            pending_space = false;
+                        }
+                        arena.push(n.text().to_string().into_boxed_str());
+                        let idx = arena.len() - 1;
+                        piece_idx.push(idx);
+                        whitespace_after.push(false);
+                        last_piece_pos = Some(piece_idx.len() - 1);
+                    }
+                    _ => {
+                        if pending_space {
+                            if let Some(prev) = last_piece_pos {
+                                whitespace_after[prev] = true;
+                            }
+                            pending_space = false;
+                        }
+                        arena.push(n.text().to_string().into_boxed_str());
+                        let idx = arena.len() - 1;
+                        piece_idx.push(idx);
+                        whitespace_after.push(false);
+                        last_piece_pos = Some(piece_idx.len() - 1);
+                    }
+                },
+            }
         }
 
-        let options = textwrap::Options::new(width)
-            .break_words(false)
-            .word_separator(textwrap::WordSeparator::AsciiSpace)
-            .word_splitter(textwrap::WordSplitter::NoHyphenation);
+        let mut words: Vec<textwrap::core::Word<'a>> = Vec::with_capacity(piece_idx.len());
+        for (i, &idx) in piece_idx.iter().enumerate() {
+            let s: &'a str = &arena[idx];
+            let mut w = textwrap::core::Word::from(s);
+            if whitespace_after.get(i).copied().unwrap_or(false) {
+                w.whitespace = " ";
+            }
+            words.push(w);
+        }
+        words
+    }
 
-        let words: Vec<&str> = text.split_whitespace().collect();
-        let normalized = words.join(" ");
+    fn wrapped_lines_for_paragraph(&self, node: &SyntaxNode, width: usize) -> Vec<String> {
+        let mut arena: Vec<Box<str>> = Vec::new();
+        let words = self.build_words(node, &mut arena);
 
-        textwrap::fill(&normalized, options)
+        let algo = WrapAlgorithm::new();
+        let line_widths = [width];
+        let lines = algo.wrap(&words, &line_widths);
+
+        let mut out_lines = Vec::with_capacity(lines.len());
+        for line in lines {
+            let mut acc = String::new();
+            for (i, w) in line.iter().enumerate() {
+                acc.push_str(w.word);
+                if i + 1 < line.len() {
+                    acc.push_str(w.whitespace);
+                } else {
+                    acc.push_str(w.penalty);
+                }
+            }
+            out_lines.push(acc);
+        }
+        out_lines
     }
 
     pub fn format(mut self, node: &SyntaxNode) -> String {
@@ -85,11 +226,11 @@ impl Formatter {
                 for child in node.children() {
                     match child.kind() {
                         SyntaxKind::PARAGRAPH => {
-                            let text = child.text().to_string().trim().to_string();
-                            let wrapped = textwrap::fill(&text, line_width.saturating_sub(2));
-                            for line in wrapped.lines() {
+                            let width = line_width.saturating_sub(2);
+                            let lines = self.wrapped_lines_for_paragraph(&child, width);
+                            for line in lines {
                                 self.output.push_str("> ");
-                                self.output.push_str(line);
+                                self.output.push_str(&line);
                                 self.output.push('\n');
                             }
                         }
@@ -105,14 +246,13 @@ impl Formatter {
             }
 
             SyntaxKind::PARAGRAPH => {
-                let text = node.text().to_string();
-                let wrapped = self.wrap_text(&text, line_width);
-
-                if !wrapped.is_empty() {
-                    self.output.push_str(&wrapped);
+                let lines = self.wrapped_lines_for_paragraph(node, line_width);
+                for (i, line) in lines.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push('\n');
+                    }
+                    self.output.push_str(line);
                 }
-
-                // Always end paragraphs with a newline for proper separation
                 if !self.output.ends_with('\n') {
                     self.output.push('\n');
                 }
@@ -136,31 +276,72 @@ impl Formatter {
             }
 
             SyntaxKind::ListItem => {
-                let node_text = node.text().to_string();
-                let local_indent = node_text.chars().take_while(|c| c.is_whitespace()).count();
-                let total_indent = indent + local_indent;
-                let trimmed = node_text.trim_start();
-                if let Some(marker_end) = trimmed.find(' ') {
-                    let marker = &trimmed[..marker_end + 1];
-                    let content = trimmed[marker_end + 1..].trim();
-                    if !content.is_empty() {
-                        let available_width =
-                            line_width.saturating_sub(marker.len() + total_indent);
-                        let wrapped = self.wrap_text(content, available_width);
+                // Compute indent and marker from leading tokens
+                let mut marker = String::new();
+                let mut local_indent = 0;
+                let mut content_start = false;
 
-                        for (i, line) in wrapped.lines().enumerate() {
-                            if i == 0 {
-                                self.output.push_str(&" ".repeat(total_indent));
-                                self.output.push_str(marker);
-                            } else {
-                                self.output
-                                    .push_str(&" ".repeat(total_indent + marker.len()));
+                for el in node.children_with_tokens() {
+                    match el {
+                        NodeOrToken::Token(t) => match t.kind() {
+                            SyntaxKind::WHITESPACE => {
+                                if !content_start {
+                                    local_indent += t.text().len();
+                                }
                             }
-                            self.output.push_str(line);
-                            self.output.push('\n');
+                            SyntaxKind::ListMarker => {
+                                marker = t.text().to_string();
+                                content_start = true;
+                            }
+                            _ => {
+                                content_start = true;
+                            }
+                        },
+                        _ => {
+                            content_start = true;
                         }
                     }
                 }
+
+                let total_indent = indent + local_indent;
+                let hanging = marker.len() + 1 + total_indent; // +1 for the space after marker
+                let available_width = self.config.line_width.saturating_sub(hanging);
+
+                // Build words from the whole node, then drop the leading marker word
+                let mut arena: Vec<Box<str>> = Vec::new();
+                let mut words = self.build_words(node, &mut arena);
+                if let Some(first) = words.first() {
+                    if first.word == marker {
+                        // Remove the marker; we will print it ourselves with a following space
+                        words.remove(0);
+                    }
+                }
+
+                let algo = WrapAlgorithm::new();
+                let line_widths = [available_width];
+                let lines = algo.wrap(&words, &line_widths);
+
+                for (i, line) in lines.iter().enumerate() {
+                    if i == 0 {
+                        self.output.push_str(&" ".repeat(total_indent));
+                        self.output.push_str(&marker);
+                        self.output.push(' ');
+                    } else {
+                        // Hanging indent includes marker + one space
+                        self.output
+                            .push_str(&" ".repeat(total_indent + marker.len() + 1));
+                    }
+                    for (j, w) in line.iter().enumerate() {
+                        self.output.push_str(w.word);
+                        if j + 1 < line.len() {
+                            self.output.push_str(w.whitespace);
+                        } else {
+                            self.output.push_str(w.penalty);
+                        }
+                    }
+                    self.output.push('\n');
+                }
+
                 // Format nested lists inside this list item with increased indent
                 for child in node.children() {
                     if child.kind() == SyntaxKind::List {

@@ -11,11 +11,15 @@ pub enum SyntaxKind {
     FrontmatterDelim, // --- or +++
     BlockQuoteMarker, // >
     ImageLinkStart,   // ![
-    LinkStart,        // [
     ListMarker,       // - + *
     CommentStart,     // <!--
     CommentEnd,       // -->
     Label,            // {#label} for headings, math, etc.
+
+    // Links
+    LinkStart, // [
+    Link,      // [text](url)
+    ImageLink, // ![alt](url)
 
     // Math
     InlineMathMarker, // $

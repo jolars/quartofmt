@@ -345,19 +345,70 @@ impl<'a> Lexer<'a> {
             }
 
             '!' if self.starts_with("![") => {
+                let start_pos = self.pos;
                 self.advance(); // consume !
                 self.advance(); // consume [
+                // Find closing ]
+                while let Some(ch) = self.current_char() {
+                    self.advance();
+                    if ch == ']' {
+                        break;
+                    }
+                }
+                // If next char is (, try to consume up to )
+                if self.current_char() == Some('(') {
+                    self.advance(); // consume (
+                    while let Some(ch) = self.current_char() {
+                        self.advance();
+                        if ch == ')' {
+                            break;
+                        }
+                    }
+                    let len = self.pos - start_pos;
+                    return Some(Token {
+                        kind: SyntaxKind::ImageLink,
+                        len,
+                    });
+                }
+                // Otherwise, treat as ImageLinkStart
+                let len = self.pos - start_pos;
                 Some(Token {
                     kind: SyntaxKind::ImageLinkStart,
-                    len: 2,
+                    len,
                 })
             }
 
             '[' => {
-                self.advance();
+                // Try to lex a full [text](url) as a single Link token
+                let start_pos = self.pos;
+                self.advance(); // consume [
+                // Find closing ]
+                while let Some(ch) = self.current_char() {
+                    self.advance();
+                    if ch == ']' {
+                        break;
+                    }
+                }
+                // If next char is (, try to consume up to )
+                if self.current_char() == Some('(') {
+                    self.advance(); // consume (
+                    while let Some(ch) = self.current_char() {
+                        self.advance();
+                        if ch == ')' {
+                            break;
+                        }
+                    }
+                    let len = self.pos - start_pos;
+                    return Some(Token {
+                        kind: SyntaxKind::Link,
+                        len,
+                    });
+                }
+                // Otherwise, treat as LinkStart
+                let len = self.pos - start_pos;
                 Some(Token {
                     kind: SyntaxKind::LinkStart,
-                    len: 1,
+                    len,
                 })
             }
 

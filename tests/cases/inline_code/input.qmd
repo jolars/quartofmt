@@ -1,0 +1,1 @@
+Here is a paragraph that contains some small bit inline code: `print("Hello, World!")`. The inline code should be properly formatted and displayed within the text.
