@@ -493,7 +493,7 @@ impl Formatter {
                         SyntaxKind::MathContent => {
                             math_content = Some(child.text().to_string());
                         }
-                        SyntaxKind::Label => {
+                        SyntaxKind::Attribute => {
                             label = Some(child.text().to_string().trim().to_string());
                         }
                         _ => {}

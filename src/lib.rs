@@ -42,7 +42,11 @@ pub fn format(input: &str, config: Option<Config>) -> String {
     let normalized_input = input.replace("\r\n", "\n");
     let tree = parse(&normalized_input);
     let config = config.unwrap_or_default();
-    format_tree(&tree, &config)
+    let mut out = format_tree(&tree, &config);
+    if !input.ends_with('\n') && out.ends_with('\n') {
+        out.pop();
+    }
+    out
 }
 
 pub fn format_with_defaults(input: &str) -> String {

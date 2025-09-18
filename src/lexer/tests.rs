@@ -27,7 +27,7 @@ fn lexer_math_block_tokens() {
             SyntaxKind::NEWLINE,         //
             SyntaxKind::BlockMathMarker, // $$
             SyntaxKind::WHITESPACE,      //
-            SyntaxKind::Label,           // {#eq:foobar}
+            SyntaxKind::Attribute,       // {#eq:foobar}
             SyntaxKind::NEWLINE,         //
         ]
     );

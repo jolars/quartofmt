@@ -169,6 +169,8 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::BlockMathMarker) => self.parse_block_math(),
                 Some(SyntaxKind::CommentStart) => self.parse_comment(),
+                Some(SyntaxKind::Link) => self.parse_link(),
+                Some(SyntaxKind::ImageLink) => self.parse_image_link(),
                 Some(SyntaxKind::LatexCommand) if self.is_standalone_latex_command() => {
                     log::debug!("Parsing standalone LaTeX command");
                     self.parse_standalone_latex_command()
@@ -393,6 +395,30 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
+    fn parse_link(&mut self) {
+        self.builder.start_node(SyntaxKind::Link.into());
+        self.advance(); // Link token
+        // Attach attribute if present
+        if self.at(SyntaxKind::Attribute) {
+            self.builder.start_node(SyntaxKind::Attribute.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+        self.builder.finish_node();
+    }
+
+    fn parse_image_link(&mut self) {
+        self.builder.start_node(SyntaxKind::ImageLink.into());
+        self.advance(); // ImageLink token
+        // Attach attribute if present
+        if self.at(SyntaxKind::Attribute) {
+            self.builder.start_node(SyntaxKind::Attribute.into());
+            self.advance();
+            self.builder.finish_node();
+        }
+        self.builder.finish_node();
+    }
+
     fn parse_inline_math(&mut self) {
         self.builder.start_node(SyntaxKind::InlineMath.into());
         // Opening $
@@ -446,8 +472,8 @@ impl<'a> Parser<'a> {
         }
 
         // Optional label
-        if self.at(SyntaxKind::Label) {
-            self.builder.start_node(SyntaxKind::Label.into());
+        if self.at(SyntaxKind::Attribute) {
+            self.builder.start_node(SyntaxKind::Attribute.into());
             self.advance();
             self.builder.finish_node();
         }
@@ -1088,7 +1114,7 @@ fn parser_math_block_structure() {
             SyntaxKind::BlockMathMarker,
             SyntaxKind::MathContent,
             SyntaxKind::BlockMathMarker,
-            SyntaxKind::Label,
+            SyntaxKind::Attribute,
         ]
     );
 }

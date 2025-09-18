@@ -428,12 +428,10 @@ impl<'a> Lexer<'a> {
                 })
             }
 
-            '{' if self.starts_with("{#") => {
-                // General label: {#...}
+            '{' => {
+                // Attribute: {...} after any element
                 let start_pos = self.pos;
                 self.advance(); // consume {
-                self.advance(); // consume #
-                // Consume until we hit }
                 while let Some(c) = self.current_char() {
                     self.advance();
                     if c == '}' {
@@ -443,7 +441,7 @@ impl<'a> Lexer<'a> {
                 let len = self.pos - start_pos;
 
                 Some(Token {
-                    kind: SyntaxKind::Label,
+                    kind: SyntaxKind::Attribute,
                     len,
                 })
             }
