@@ -43,10 +43,10 @@ impl Formatter {
         while let Some(el) = it.next() {
             match el {
                 rowan::NodeOrToken::Token(t) => match t.kind() {
-                    crate::syntax::SyntaxKind::WHITESPACE | crate::syntax::SyntaxKind::NEWLINE => {
+                    SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {
                         pending_space = true;
                     }
-                    crate::syntax::SyntaxKind::Link | crate::syntax::SyntaxKind::ImageLink => {
+                    SyntaxKind::Link | SyntaxKind::ImageLink => {
                         if pending_space {
                             if let Some(prev) = last_piece_pos {
                                 whitespace_after[prev] = true;
@@ -59,9 +59,9 @@ impl Formatter {
                         whitespace_after.push(false);
                         last_piece_pos = Some(piece_idx.len() - 1);
                     }
-                    crate::syntax::SyntaxKind::TEXT
-                    | crate::syntax::SyntaxKind::LatexCommand
-                    | crate::syntax::SyntaxKind::CodeSpan => {
+                    SyntaxKind::TEXT
+                    | SyntaxKind::LatexCommand
+                    | SyntaxKind::CodeSpan => {
                         if pending_space {
                             if let Some(prev) = last_piece_pos {
                                 whitespace_after[prev] = true;
@@ -74,7 +74,7 @@ impl Formatter {
                         whitespace_after.push(false);
                         last_piece_pos = Some(piece_idx.len() - 1);
                     }
-                    crate::syntax::SyntaxKind::InlineMathMarker => {
+                    SyntaxKind::InlineMathMarker => {
                         if pending_space {
                             if let Some(prev) = last_piece_pos {
                                 whitespace_after[prev] = true;
@@ -87,7 +87,7 @@ impl Formatter {
                             match next {
                                 rowan::NodeOrToken::Token(nt) => {
                                     acc.push_str(nt.text());
-                                    if nt.kind() == crate::syntax::SyntaxKind::InlineMathMarker {
+                                    if nt.kind() == SyntaxKind::InlineMathMarker {
                                         break;
                                     }
                                 }
@@ -117,7 +117,7 @@ impl Formatter {
                     }
                 },
                 rowan::NodeOrToken::Node(n) => match n.kind() {
-                    crate::syntax::SyntaxKind::InlineMath => {
+                    SyntaxKind::InlineMath => {
                         if pending_space {
                             if let Some(prev) = last_piece_pos {
                                 whitespace_after[prev] = true;
