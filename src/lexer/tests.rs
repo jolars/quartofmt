@@ -166,29 +166,29 @@ fn lexer_nested_list_tokens() {
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
     let expected = vec![
         crate::syntax::SyntaxKind::ListMarker, // -
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // Top
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // level
-        crate::syntax::SyntaxKind::NEWLINE,
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // Top
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // level
+        crate::syntax::SyntaxKind::NEWLINE,    //
         crate::syntax::SyntaxKind::WHITESPACE, // (indent)
         crate::syntax::SyntaxKind::ListMarker, // -
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // Nested
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // level
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // 1
-        crate::syntax::SyntaxKind::NEWLINE,
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // Nested
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // level
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // 1
+        crate::syntax::SyntaxKind::NEWLINE,    //
         crate::syntax::SyntaxKind::WHITESPACE, // (indent)
         crate::syntax::SyntaxKind::ListMarker, // -
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // Nested
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // level
-        crate::syntax::SyntaxKind::WHITESPACE,
-        crate::syntax::SyntaxKind::TEXT, // 2
-        crate::syntax::SyntaxKind::NEWLINE,
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // Nested
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // level
+        crate::syntax::SyntaxKind::WHITESPACE, //
+        crate::syntax::SyntaxKind::TEXT,       // 2
+        crate::syntax::SyntaxKind::NEWLINE,    //
     ];
     assert_eq!(
         kinds, expected,
