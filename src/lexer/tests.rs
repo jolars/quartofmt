@@ -145,16 +145,16 @@ fn lexer_list_marker_bol_only() {
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
     let expected = vec![
-        crate::syntax::SyntaxKind::TEXT,       // foo
-        crate::syntax::SyntaxKind::WHITESPACE, //
-        crate::syntax::SyntaxKind::TEXT,       // -
-        crate::syntax::SyntaxKind::WHITESPACE, //
-        crate::syntax::SyntaxKind::TEXT,       // bar
-        crate::syntax::SyntaxKind::NEWLINE,    //
-        crate::syntax::SyntaxKind::ListMarker, // -
-        crate::syntax::SyntaxKind::WHITESPACE, //
-        crate::syntax::SyntaxKind::TEXT,       // item
-        crate::syntax::SyntaxKind::NEWLINE,    //
+        SyntaxKind::TEXT,       // foo
+        SyntaxKind::WHITESPACE, //
+        SyntaxKind::TEXT,       // -
+        SyntaxKind::WHITESPACE, //
+        SyntaxKind::TEXT,       // bar
+        SyntaxKind::NEWLINE,    //
+        SyntaxKind::ListMarker, // -
+        SyntaxKind::WHITESPACE, //
+        SyntaxKind::TEXT,       // item
+        SyntaxKind::NEWLINE,    //
     ];
     assert_eq!(kinds, expected, "Only BOL '-' should be ListMarker");
 }
@@ -273,4 +273,29 @@ fn lexer_does_not_treat_hash_number_as_heading() {
     let hash_token = tokens.iter().find(|t| t.kind == SyntaxKind::TEXT).unwrap();
     // It should be TEXT, not a heading marker
     assert_eq!(hash_token.kind, SyntaxKind::TEXT);
+}
+
+#[test]
+fn latex_math_and_command() {
+    // Create a test string with inline math followed by space and text
+    let input = "$\\alpha$ is text";
+
+    // Tokenize the input
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+
+    let expected = vec![
+        SyntaxKind::InlineMathMarker, // $
+        SyntaxKind::LatexCommand,     // \alpha
+        SyntaxKind::InlineMathMarker, // $
+        SyntaxKind::WHITESPACE,       // (space)
+        SyntaxKind::TEXT,             // is
+        SyntaxKind::WHITESPACE,       // (space)
+        SyntaxKind::TEXT,             // text
+    ];
+
+    assert_eq!(
+        kinds, expected,
+        "Lexer should correctly tokenize LaTeX math and commands"
+    );
 }

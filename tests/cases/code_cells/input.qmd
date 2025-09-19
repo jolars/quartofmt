@@ -1,3 +1,5 @@
 ```{python}
 print("Hello, world!")
 ```
+
+This is `foo   bar` inline code.
