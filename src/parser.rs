@@ -169,8 +169,6 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::BlockMathMarker) => self.parse_block_math(),
                 Some(SyntaxKind::CommentStart) => self.parse_comment(),
-                Some(SyntaxKind::Link) => self.parse_link(),
-                Some(SyntaxKind::ImageLink) => self.parse_image_link(),
                 Some(SyntaxKind::LatexCommand) if self.is_standalone_latex_command() => {
                     log::debug!("Parsing standalone LaTeX command");
                     self.parse_standalone_latex_command()
@@ -662,6 +660,15 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
+                Some(SyntaxKind::Link) | Some(SyntaxKind::ImageLink) => {
+                    log::trace!("Paragraph: parsing link or image link");
+                    match self.current_token().map(|t| t.kind) {
+                        Some(SyntaxKind::Link) => self.parse_link(),
+                        Some(SyntaxKind::ImageLink) => self.parse_image_link(),
+                        _ => unreachable!(),
+                    }
+                }
+
                 Some(
                     SyntaxKind::CodeFenceMarker
                     | SyntaxKind::DivMarker
@@ -1116,5 +1123,55 @@ fn parser_math_block_structure() {
             SyntaxKind::BlockMathMarker,
             SyntaxKind::Attribute,
         ]
+    );
+}
+
+#[test]
+fn parser_link_should_be_inside_paragraph() {
+    let input = "[A network graph. Different edges \"fail\" independently with probability $p$.](../images/networkfig.png){width=70%}\nA word\n";
+    let tree = crate::parser::parse(input);
+    let document = tree
+        .children()
+        .find(|n| n.kind() == SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+    let mut paragraphs = document
+        .children()
+        .filter(|n| n.kind() == SyntaxKind::PARAGRAPH);
+
+    let first_paragraph = paragraphs.next().expect("First paragraph");
+    let paragraph_text = first_paragraph.text().to_string();
+
+    assert!(
+        paragraph_text.contains("[A network graph."),
+        "Link should be inside paragraph node"
+    );
+    assert!(
+        paragraph_text.contains("A word"),
+        "Second line should be inside paragraph node"
+    );
+}
+
+#[test]
+fn parser_link_with_attribute_should_include_attribute_in_link_node() {
+    let input = "[foo](bar){.class}\n";
+    let tree = crate::parser::parse(input);
+    let document = tree
+        .children()
+        .find(|n| n.kind() == SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+    let paragraph = document
+        .children()
+        .find(|n| n.kind() == SyntaxKind::PARAGRAPH)
+        .expect("PARAGRAPH node");
+    let link = paragraph
+        .children()
+        .find(|n| n.kind() == SyntaxKind::Link)
+        .expect("Link node");
+
+    let attr = link.children().find(|n| n.kind() == SyntaxKind::Attribute);
+
+    assert!(
+        attr.is_some(),
+        "Attribute should be included as a child of the Link node"
     );
 }

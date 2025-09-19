@@ -59,9 +59,7 @@ impl Formatter {
                         whitespace_after.push(false);
                         last_piece_pos = Some(piece_idx.len() - 1);
                     }
-                    SyntaxKind::TEXT
-                    | SyntaxKind::LatexCommand
-                    | SyntaxKind::CodeSpan => {
+                    SyntaxKind::TEXT | SyntaxKind::LatexCommand | SyntaxKind::CodeSpan => {
                         if pending_space {
                             if let Some(prev) = last_piece_pos {
                                 whitespace_after[prev] = true;
@@ -150,7 +148,9 @@ impl Formatter {
         let mut words: Vec<textwrap::core::Word<'a>> = Vec::with_capacity(piece_idx.len());
         for (i, &idx) in piece_idx.iter().enumerate() {
             let s: &'a str = &arena[idx];
+            println!("Word: {:?}", s);
             let mut w = textwrap::core::Word::from(s);
+
             if whitespace_after.get(i).copied().unwrap_or(false) {
                 w.whitespace = " ";
             }
@@ -168,6 +168,7 @@ impl Formatter {
         let lines = algo.wrap(&words, &line_widths);
 
         let mut out_lines = Vec::with_capacity(lines.len());
+
         for line in lines {
             let mut acc = String::new();
             for (i, w) in line.iter().enumerate() {
@@ -333,12 +334,14 @@ impl Formatter {
                     }
                     WrapMode::Reflow => {
                         let lines = self.wrapped_lines_for_paragraph(node, line_width);
+
                         for (i, line) in lines.iter().enumerate() {
                             if i > 0 {
                                 self.output.push('\n');
                             }
                             self.output.push_str(line);
                         }
+
                         if !self.output.ends_with('\n') {
                             self.output.push('\n');
                         }
