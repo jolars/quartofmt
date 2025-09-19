@@ -503,10 +503,19 @@ impl<'a> Lexer<'a> {
                     !matches!(c, '\n' | ' ' | '\t' | '\r' | '`' | '~' | '$' | '[' | '\\')
                 });
 
-                Some(Token {
-                    kind: SyntaxKind::TEXT,
-                    len,
-                })
+                // If we didn't advance, advance by one character to prevent infinite loop
+                if len == 0 {
+                    self.advance();
+                    Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len: 1,
+                    })
+                } else {
+                    Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len,
+                    })
+                }
             }
         }
     }
