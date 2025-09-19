@@ -7,3 +7,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 $\alpha$ is the **acceptance probability** and $g(y)/\alpha$ the **envelope** of $f$.
 
 The $i$th iteration.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod temporal:
+bla bla bla.

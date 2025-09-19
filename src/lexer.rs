@@ -469,57 +469,15 @@ impl<'a> Lexer<'a> {
             }
 
             _ => {
-                // Check for special case: ! followed by [
-                if ch == '!' && self.peek_char(1) == Some('[') {
-                    // This will be handled by the ![  case above, but if we get here
-                    // just advance one character to avoid infinite loop
-                    self.advance();
-                    Some(Token {
-                        kind: SyntaxKind::TEXT,
-                        len: 1,
-                    })
-                } else if ch.is_ascii_digit() && self.is_numbered_list_marker() {
-                    // This will be handled by the numbered list case above
-                    self.advance();
-                    Some(Token {
-                        kind: SyntaxKind::TEXT,
-                        len: 1,
-                    })
-                } else {
-                    // Regular text - advance until we hit something special
-                    let len = self.advance_while(|c| {
-                        !matches!(
-                            c,
-                            '\n' | ' '
-                                | '\t'
-                                | '\r'
-                                | '`'
-                                | '~'
-                                | ':'
-                                | '$'
-                                | '-'
-                                | '+'
-                                | '['
-                                | '>'
-                                | '!'
-                                | '\\'
-                        )
-                    });
+                // Regular text - advance until we hit something special
+                let len = self.advance_while(|c| {
+                    !matches!(c, '\n' | ' ' | '\t' | '\r' | '`' | '~' | '$' | '[' | '\\')
+                });
 
-                    // If we didn't advance, advance by one character to prevent infinite loop
-                    if len == 0 {
-                        self.advance();
-                        Some(Token {
-                            kind: SyntaxKind::TEXT,
-                            len: 1,
-                        })
-                    } else {
-                        Some(Token {
-                            kind: SyntaxKind::TEXT,
-                            len,
-                        })
-                    }
-                }
+                Some(Token {
+                    kind: SyntaxKind::TEXT,
+                    len,
+                })
             }
         }
     }
