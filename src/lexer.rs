@@ -288,20 +288,49 @@ impl<'a> Lexer<'a> {
             }
 
             '$' => {
-                // Detect block math: 2 or more $ at start of line or after newline
+                // Detect inline ($...$) and block ($$...$$) math
+                let start_pos = self.pos;
                 let dollar_count = self.advance_while(|c| c == '$');
-                let is_block_math = dollar_count >= 2;
-                if is_block_math {
-                    Some(Token {
+                if dollar_count >= 2 {
+                    return Some(Token {
                         kind: SyntaxKind::BlockMathMarker,
                         len: dollar_count,
-                    })
-                } else {
-                    Some(Token {
-                        kind: SyntaxKind::InlineMathMarker,
-                        len: dollar_count,
-                    })
+                    });
                 }
+
+                // Single '$': apply Pandoc-like heuristics.
+                // - If escaped (\$), treat as TEXT.
+                // - If immediately followed by a digit, treat as TEXT and
+                //   consume the numeric run (e.g., $20,000, $30.).
+                // - Otherwise, treat as InlineMathMarker.
+                let prev_char = if start_pos == 0 {
+                    None
+                } else {
+                    self.input[..start_pos].chars().next_back()
+                };
+
+                if prev_char == Some('\\') {
+                    return Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len: 1,
+                    });
+                }
+
+                let next_char = self.current_char();
+                if matches!(next_char, Some(c) if c.is_ascii_digit()) {
+                    // Consume number-like sequence following the dollar
+                    self.advance_while(|c| c.is_ascii_digit() || c == ',' || c == '.');
+                    let len = self.pos - start_pos;
+                    return Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len,
+                    });
+                }
+
+                Some(Token {
+                    kind: SyntaxKind::InlineMathMarker,
+                    len: 1,
+                })
             }
 
             '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {

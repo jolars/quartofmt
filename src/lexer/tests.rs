@@ -281,7 +281,7 @@ fn latex_math_and_command() {
     let input = "$\\alpha$ is text";
 
     // Tokenize the input
-    let tokens = crate::lexer::tokenize(input);
+    let tokens = tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
 
     let expected = vec![
@@ -298,4 +298,23 @@ fn latex_math_and_command() {
         kinds, expected,
         "Lexer should correctly tokenize LaTeX math and commands"
     );
+}
+
+#[test]
+fn handle_actual_dollar() {
+    let input = "Costs $20,000 not $30.";
+    let tokens = tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+
+    let expected = vec![
+        SyntaxKind::TEXT,       // Costs
+        SyntaxKind::WHITESPACE, // (space)
+        SyntaxKind::TEXT,       // $20,000
+        SyntaxKind::WHITESPACE, // (space)
+        SyntaxKind::TEXT,       // not
+        SyntaxKind::WHITESPACE, // (space)
+        SyntaxKind::TEXT,       // $30.
+    ];
+
+    assert_eq!(kinds, expected, "Lexer should treat dollar amounts as TEXT");
 }
