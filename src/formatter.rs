@@ -34,124 +34,68 @@ impl Formatter {
         node: &SyntaxNode,
         arena: &'a mut Vec<Box<str>>,
     ) -> Vec<textwrap::core::Word<'a>> {
-        let mut piece_idx: Vec<usize> = Vec::new();
-        let mut whitespace_after: Vec<bool> = Vec::new();
-        let mut last_piece_pos: Option<usize> = None;
-        let mut pending_space = false;
+        struct Builder<'a> {
+            arena: &'a mut Vec<Box<str>>,
+            piece_idx: Vec<usize>,
+            whitespace_after: Vec<bool>,
+            last_piece_pos: Option<usize>,
+            pending_space: bool,
+        }
 
-        let mut it = node.children_with_tokens();
-        while let Some(el) = it.next() {
-            match el {
-                rowan::NodeOrToken::Token(t) => match t.kind() {
-                    SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {
-                        pending_space = true;
+        impl<'a> Builder<'a> {
+            fn new(arena: &'a mut Vec<Box<str>>) -> Self {
+                Self {
+                    arena,
+                    piece_idx: Vec::new(),
+                    whitespace_after: Vec::new(),
+                    last_piece_pos: None,
+                    pending_space: false,
+                }
+            }
+
+            fn flush_pending(&mut self) {
+                if self.pending_space {
+                    if let Some(prev) = self.last_piece_pos {
+                        self.whitespace_after[prev] = true;
                     }
-                    SyntaxKind::Link | SyntaxKind::ImageLink => {
-                        if pending_space {
-                            if let Some(prev) = last_piece_pos {
-                                whitespace_after[prev] = true;
-                            }
-                            pending_space = false;
-                        }
-                        arena.push(Box::<str>::from(t.text()));
-                        let idx = arena.len() - 1;
-                        piece_idx.push(idx);
-                        whitespace_after.push(false);
-                        last_piece_pos = Some(piece_idx.len() - 1);
-                    }
-                    SyntaxKind::TEXT | SyntaxKind::LatexCommand | SyntaxKind::CodeSpan => {
-                        if pending_space {
-                            if let Some(prev) = last_piece_pos {
-                                whitespace_after[prev] = true;
-                            }
-                            pending_space = false;
-                        }
-                        arena.push(Box::<str>::from(t.text()));
-                        let idx = arena.len() - 1;
-                        piece_idx.push(idx);
-                        whitespace_after.push(false);
-                        last_piece_pos = Some(piece_idx.len() - 1);
-                    }
-                    SyntaxKind::InlineMathMarker => {
-                        if pending_space {
-                            if let Some(prev) = last_piece_pos {
-                                whitespace_after[prev] = true;
-                            }
-                            pending_space = false;
-                        }
-                        let mut acc = String::new();
-                        acc.push_str(t.text());
-                        for next in it.by_ref() {
-                            match next {
-                                rowan::NodeOrToken::Token(nt) => {
-                                    acc.push_str(nt.text());
-                                    if nt.kind() == SyntaxKind::InlineMathMarker {
-                                        break;
-                                    }
-                                }
-                                rowan::NodeOrToken::Node(n) => {
-                                    acc.push_str(&n.text().to_string());
-                                }
-                            }
-                        }
-                        arena.push(acc.into_boxed_str());
-                        let idx = arena.len() - 1;
-                        piece_idx.push(idx);
-                        whitespace_after.push(false);
-                        last_piece_pos = Some(piece_idx.len() - 1);
-                    }
-                    _ => {
-                        if pending_space {
-                            if let Some(prev) = last_piece_pos {
-                                whitespace_after[prev] = true;
-                            }
-                            pending_space = false;
-                        }
-                        arena.push(Box::<str>::from(t.text()));
-                        let idx = arena.len() - 1;
-                        piece_idx.push(idx);
-                        whitespace_after.push(false);
-                        last_piece_pos = Some(piece_idx.len() - 1);
-                    }
-                },
-                rowan::NodeOrToken::Node(n) => match n.kind() {
-                    SyntaxKind::InlineMath => {
-                        if pending_space {
-                            if let Some(prev) = last_piece_pos {
-                                whitespace_after[prev] = true;
-                            }
-                            pending_space = false;
-                        }
-                        arena.push(n.text().to_string().into_boxed_str());
-                        let idx = arena.len() - 1;
-                        piece_idx.push(idx);
-                        whitespace_after.push(false);
-                        last_piece_pos = Some(piece_idx.len() - 1);
-                    }
-                    _ => {
-                        if pending_space {
-                            if let Some(prev) = last_piece_pos {
-                                whitespace_after[prev] = true;
-                            }
-                            pending_space = false;
-                        }
-                        arena.push(n.text().to_string().into_boxed_str());
-                        let idx = arena.len() - 1;
-                        piece_idx.push(idx);
-                        whitespace_after.push(false);
-                        last_piece_pos = Some(piece_idx.len() - 1);
-                    }
-                },
+                    self.pending_space = false;
+                }
+            }
+
+            fn push_piece(&mut self, text: &str) {
+                self.flush_pending();
+                self.arena.push(Box::<str>::from(text));
+                let idx = self.arena.len() - 1;
+                self.piece_idx.push(idx);
+                self.whitespace_after.push(false);
+                self.last_piece_pos = Some(self.piece_idx.len() - 1);
             }
         }
 
-        let mut words: Vec<textwrap::core::Word<'a>> = Vec::with_capacity(piece_idx.len());
-        for (i, &idx) in piece_idx.iter().enumerate() {
-            let s: &'a str = &arena[idx];
-            println!("Word: {:?}", s);
-            let mut w = textwrap::core::Word::from(s);
+        let mut b = Builder::new(arena);
 
-            if whitespace_after.get(i).copied().unwrap_or(false) {
+        for el in node.children_with_tokens() {
+            match el {
+                NodeOrToken::Token(t) => match t.kind() {
+                    SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {
+                        b.pending_space = true;
+                    }
+                    _ => {
+                        b.push_piece(t.text());
+                    }
+                },
+                NodeOrToken::Node(n) => {
+                    let text = n.text().to_string();
+                    b.push_piece(&text);
+                }
+            }
+        }
+
+        let mut words: Vec<textwrap::core::Word<'a>> = Vec::with_capacity(b.piece_idx.len());
+        for (i, &idx) in b.piece_idx.iter().enumerate() {
+            let s: &'a str = &b.arena[idx];
+            let mut w = textwrap::core::Word::from(s);
+            if b.whitespace_after.get(i).copied().unwrap_or(false) {
                 w.whitespace = " ";
             }
             words.push(w);
