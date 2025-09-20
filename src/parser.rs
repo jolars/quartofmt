@@ -783,72 +783,131 @@ impl<'a> Parser<'a> {
     }
 
     fn is_simple_table_start(&self) -> bool {
-        // Save current position
-        let mut pos = self.pos;
-        // 1. First line: TEXT or WHITESPACE, then NEWLINE
-        let mut saw_text = false;
-        while pos < self.tokens.len() {
-            match self.tokens[pos].kind {
-                SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
-                    saw_text = true;
-                    pos += 1;
-                }
-                SyntaxKind::NEWLINE => {
-                    pos += 1;
-                    break;
-                }
-                _ => return false,
-            }
-        }
-        if !saw_text {
-            return false;
-        }
-        // 2. Second line: dashes (TEXT token containing only - and spaces), then NEWLINE
-        let mut saw_dash = false;
-        while pos < self.tokens.len() {
-            match self.tokens[pos].kind {
-                SyntaxKind::TEXT => {
-                    let start = token_offset(&self.tokens, pos);
-                    let end = start + self.tokens[pos].len;
-                    let text = &self.input[start..end];
-
-                    log::debug!("SimpleTable candidate line {pos}: {text}");
-
-                    if text.trim().chars().all(|c| c == '-' || c == ' ') {
-                        saw_dash = true;
+        // Try headered simple table:
+        // 1) header line (TEXT/WHITESPACE), 2) dashed line, 3) at least one body row
+        {
+            let mut pos = self.pos;
+            // 1. First line: TEXT or WHITESPACE, then NEWLINE
+            let mut saw_text = false;
+            while pos < self.tokens.len() {
+                match self.tokens[pos].kind {
+                    SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
+                        saw_text = true;
                         pos += 1;
-                    } else {
-                        return false;
+                    }
+                    SyntaxKind::NEWLINE => {
+                        pos += 1;
+                        break;
+                    }
+                    _ => break,
+                }
+            }
+            if saw_text {
+                // 2. Second line: dashes (one or more TEXT tokens containing only '-' and spaces), then NEWLINE
+                let mut saw_dash = false;
+                while pos < self.tokens.len() {
+                    match self.tokens[pos].kind {
+                        SyntaxKind::TEXT => {
+                            let start = token_offset(&self.tokens, pos);
+                            let end = start + self.tokens[pos].len;
+                            let text = &self.input[start..end];
+                            log::debug!("SimpleTable candidate line {pos}: {text}");
+                            if text.trim().chars().all(|c| c == '-' || c == ' ') {
+                                saw_dash = true;
+                                pos += 1;
+                            } else {
+                                // Not a dashed line; abort headered form
+                                saw_dash = false;
+                                break;
+                            }
+                        }
+                        SyntaxKind::WHITESPACE => {
+                            pos += 1;
+                        }
+                        SyntaxKind::NEWLINE => {
+                            pos += 1;
+                            break;
+                        }
+                        _ => break,
                     }
                 }
-                SyntaxKind::WHITESPACE => {
-                    pos += 1;
+                if saw_dash {
+                    // 3. Third line: TEXT or WHITESPACE (at least one row), then NEWLINE
+                    let mut saw_row = false;
+                    while pos < self.tokens.len() {
+                        match self.tokens[pos].kind {
+                            SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
+                                saw_row = true;
+                                pos += 1;
+                            }
+                            SyntaxKind::NEWLINE => {
+                                break;
+                            }
+                            _ => return false,
+                        }
+                    }
+                    if saw_row {
+                        return true;
+                    }
                 }
-                SyntaxKind::NEWLINE => {
-                    pos += 1;
-                    break;
-                }
-                _ => return false,
             }
         }
-        if !saw_dash {
-            return false;
-        }
-        // 3. Third line: TEXT or WHITESPACE, then NEWLINE (at least one row)
-        let mut saw_row = false;
-        while pos < self.tokens.len() {
-            match self.tokens[pos].kind {
-                SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
-                    saw_row = true;
-                    pos += 1;
+
+        // Try headerless simple table:
+        // 1) first line is dashed separator
+        // 2) at least one body row line follows
+        {
+            let mut pos = self.pos;
+
+            // 1. Dashed line (one or more TEXT tokens of '-' and spaces), allow interspersed WHITESPACE tokens
+            let mut saw_dash = false;
+            while pos < self.tokens.len() {
+                match self.tokens[pos].kind {
+                    SyntaxKind::TEXT => {
+                        let start = token_offset(&self.tokens, pos);
+                        let end = start + self.tokens[pos].len;
+                        let text = &self.input[start..end];
+                        if text.trim().chars().all(|c| c == '-' || c == ' ') {
+                            saw_dash = true;
+                            pos += 1;
+                        } else {
+                            return false;
+                        }
+                    }
+                    SyntaxKind::WHITESPACE => {
+                        pos += 1;
+                    }
+                    SyntaxKind::NEWLINE => {
+                        pos += 1;
+                        break;
+                    }
+                    _ => return false,
                 }
-                SyntaxKind::NEWLINE => {
-                    break;
+            }
+            if !saw_dash {
+                return false;
+            }
+
+            // 2. At least one body row line (TEXT/WHITESPACE until NEWLINE)
+            let mut saw_row = false;
+            while pos < self.tokens.len() {
+                match self.tokens[pos].kind {
+                    SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
+                        saw_row = true;
+                        pos += 1;
+                    }
+                    SyntaxKind::NEWLINE => {
+                        break;
+                    }
+                    _ => return false,
                 }
-                _ => return false,
+            }
+            if saw_row {
+                return true;
             }
         }
-        saw_row
+
+        false
     }
 
     fn parse_simple_table(&mut self) {
