@@ -487,22 +487,31 @@ impl<'a> Parser<'a> {
     fn parse_block_quote(&mut self) {
         self.builder.start_node(SyntaxKind::BlockQuote.into());
 
-        while !self.at_eof() && self.at(SyntaxKind::BlockQuoteMarker) {
-            // Consume the initial '>' and optional whitespace
-            self.advance(); // '>'
-            if self.at(SyntaxKind::WHITESPACE) {
-                self.advance();
+        // Start with the initial quoted line
+        let mut first = true;
+        while !self.at_eof() {
+            // Only require BlockQuoteMarker for the first line of a block quote paragraph
+            if first {
+                if !self.at(SyntaxKind::BlockQuoteMarker) {
+                    break;
+                }
+                self.advance(); // '>'
+                if self.at(SyntaxKind::WHITESPACE) {
+                    self.advance();
+                }
+
+                // Quoted blank line: emit a BlankLine node
+                if self.at(SyntaxKind::NEWLINE) {
+                    self.builder.start_node(SyntaxKind::BlankLine.into());
+                    self.advance(); // consume newline
+                    self.builder.finish_node();
+                    // Next line may start a new block quote paragraph
+                    first = true;
+                    continue;
+                }
             }
 
-            // Blank quote line: just emit a BlankLine node
-            if self.at(SyntaxKind::NEWLINE) {
-                self.builder.start_node(SyntaxKind::BlankLine.into());
-                self.advance(); // consume newline
-                self.builder.finish_node();
-                continue;
-            }
-
-            // Start a single paragraph that may span multiple quoted lines
+            // Start a single paragraph that may span multiple quoted and lazy lines
             self.builder.start_node(SyntaxKind::PARAGRAPH.into());
 
             loop {
@@ -515,28 +524,43 @@ impl<'a> Parser<'a> {
                     self.advance();
                 }
 
-                // If the next line continues the quote, consume its marker and optional space WITHOUT emitting
+                // If the next line starts with BlockQuoteMarker, decide whether it's a blank quoted
+                // line (which should be a separate BlankLine node) or a normal continued quoted line.
                 if self.at(SyntaxKind::BlockQuoteMarker) {
-                    self.skip_token(); // '>'
+                    // Look ahead without emitting into the paragraph
+                    let mut tmp = self.pos + 1; // after '>'
+                    // Skip optional whitespace
+                    while tmp < self.tokens.len() && self.tokens[tmp].kind == SyntaxKind::WHITESPACE
+                    {
+                        tmp += 1;
+                    }
+                    // If immediately a newline, this is a quoted blank line -> finish this paragraph
+                    if tmp < self.tokens.len() && self.tokens[tmp].kind == SyntaxKind::NEWLINE {
+                        break;
+                    }
+
+                    // Otherwise, it's a continued quoted line: skip the marker (and optional space)
+                    // so they are NOT included in the paragraph text.
+                    self.skip_token(); // skip '>'
                     if self.at(SyntaxKind::WHITESPACE) {
                         self.skip_token();
                     }
-                    // If it's a blank quoted line, end the paragraph and emit a BlankLine
-                    if self.at(SyntaxKind::NEWLINE) {
-                        self.builder.finish_node(); // end paragraph
-                        self.builder.start_node(SyntaxKind::BlankLine.into());
-                        self.advance(); // consume newline (emit)
-                        self.builder.finish_node();
-                        break;
-                    }
-                    // Continue accumulating into the same paragraph
                     continue;
                 }
 
-                // Next line is not quoted: finish this paragraph
-                self.builder.finish_node();
+                // If the next line is not quoted but is not blank, treat as lazy continuation
+                // (i.e., part of the same block quote paragraph)
+                if self.at(SyntaxKind::TEXT) || self.at(SyntaxKind::WHITESPACE) {
+                    continue;
+                }
+
+                // Next line is blank or a block boundary: finish this paragraph
                 break;
             }
+
+            self.builder.finish_node();
+            // After a paragraph, expect either a blank line or a new block quote marker
+            first = true;
         }
 
         self.builder.finish_node();
@@ -1195,4 +1219,32 @@ fn parser_html_comment_then_text_parses_correctly() {
         .find(|n| n.kind() == SyntaxKind::PARAGRAPH)
         .expect("PARAGRAPH node");
     assert_eq!(para.text().to_string(), "bar\n");
+}
+
+#[test]
+fn parser_lazy_block_quote_paragraph() {
+    let input = "> This is a block quote. This paragraph has two lines. It has a bit of text, and then some other\ntext. It is a lazy block quote. It should be formatted as a single paragraph\nwith leading > characters, indented by one space.\n";
+    let tree = crate::parser::parse(input);
+    let document = tree
+        .children()
+        .find(|n| n.kind() == SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+    let block_quote = document
+        .children()
+        .find(|n| n.kind() == SyntaxKind::BlockQuote)
+        .expect("BlockQuote node");
+    let paragraphs: Vec<_> = block_quote
+        .children()
+        .filter(|n| n.kind() == SyntaxKind::PARAGRAPH)
+        .collect();
+    assert_eq!(
+        paragraphs.len(),
+        1,
+        "Lazy block quote should be parsed as a single paragraph"
+    );
+    let para_text = paragraphs[0].text().to_string();
+    assert!(
+        para_text.contains("lazy block quote"),
+        "Paragraph text should include lazy lines"
+    );
 }

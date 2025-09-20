@@ -1,2 +1,6 @@
 > Is it fine to reuse work, including solutions from the group presentation for the oral
 > examination?
+
+> This is a block quote. This paragraph has two lines. It has a bit of text, and then some other
+text. It is a lazy block quote. It should be formatted as a single paragraph
+with leading > characters, indented by one space.
