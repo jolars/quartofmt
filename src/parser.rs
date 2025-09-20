@@ -1248,3 +1248,31 @@ fn parser_lazy_block_quote_paragraph() {
         "Paragraph text should include lazy lines"
     );
 }
+
+#[test]
+fn parser_double_blockquote_not_nested_without_blank_line() {
+    let input = "> This is a block quote.\n>> Not nested, since `blank_before_blockquote` is enabled by default\n";
+    let tree = crate::parser::parse(input);
+    let document = tree
+        .children()
+        .find(|n| n.kind() == crate::syntax::SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+
+    // Should be a single BlockQuote node
+    let block_quotes: Vec<_> = document
+        .children()
+        .filter(|n| n.kind() == crate::syntax::SyntaxKind::BlockQuote)
+        .collect();
+    assert_eq!(
+        block_quotes.len(),
+        1,
+        "Should only produce a single block quote (not nested) without blank line before"
+    );
+
+    // The block quote should contain both lines as a single paragraph
+    let para_text = block_quotes[0].text().to_string();
+    assert!(
+        para_text.contains("Not nested"),
+        "Block quote should include the second line"
+    );
+}
