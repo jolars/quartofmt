@@ -499,9 +499,22 @@ impl<'a> Lexer<'a> {
 
             _ => {
                 // Regular text - advance until we hit something special
-                let len = self.advance_while(|c| {
-                    !matches!(c, '\n' | ' ' | '\t' | '\r' | '`' | '~' | '$' | '[' | '\\')
-                });
+                let start = self.pos;
+                while let Some(c) = self.current_char() {
+                    // Base stop set
+                    if matches!(c, '\n' | ' ' | '\t' | '\r' | '`' | '~' | '$' | '[' | '\\') {
+                        break;
+                    }
+                    // Stop before HTML comment delimiters so they can be tokenized
+                    if c == '<' && self.starts_with("<!--") {
+                        break;
+                    }
+                    if c == '-' && self.starts_with("-->") {
+                        break;
+                    }
+                    self.advance();
+                }
+                let len = self.pos - start;
 
                 // If we didn't advance, advance by one character to prevent infinite loop
                 if len == 0 {

@@ -1175,3 +1175,24 @@ fn parser_link_with_attribute_should_include_attribute_in_link_node() {
         "Attribute should be included as a child of the Link node"
     );
 }
+
+#[test]
+fn parser_html_comment_then_text_parses_correctly() {
+    let input = "<!--foo-->bar\n";
+    let tree = crate::parser::parse(input);
+
+    let document = tree
+        .children()
+        .find(|n| n.kind() == SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+
+    let kinds: Vec<_> = document.children().map(|n| n.kind()).collect();
+    assert_eq!(kinds.first(), Some(&SyntaxKind::Comment));
+    assert_eq!(kinds.get(1), Some(&SyntaxKind::PARAGRAPH));
+
+    let para = document
+        .children()
+        .find(|n| n.kind() == SyntaxKind::PARAGRAPH)
+        .expect("PARAGRAPH node");
+    assert_eq!(para.text().to_string(), "bar\n");
+}
