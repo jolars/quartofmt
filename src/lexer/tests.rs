@@ -379,3 +379,30 @@ fn lexer_blockquote_more_than_three_spaces_is_not_marker_even_after_blank() {
         "Indent > 3 spaces should not be a block quote marker"
     );
 }
+
+#[test]
+fn lexer_nested_blockquote_after_blank_line_has_two_markers_on_line() {
+    // After a quoted blank line, a nested quote line with '> >' should emit two markers.
+    let input = "> Text\n>\n> > Nested\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+
+    let expected = vec![
+        SyntaxKind::BlockQuoteMarker, // >
+        SyntaxKind::WHITESPACE,       // (space)
+        SyntaxKind::TEXT,             // Text
+        SyntaxKind::NEWLINE,          //
+        SyntaxKind::BlockQuoteMarker, // >
+        SyntaxKind::NEWLINE,          //
+        SyntaxKind::BlockQuoteMarker, // >
+        SyntaxKind::WHITESPACE,       // (space)
+        SyntaxKind::BlockQuoteMarker, // >
+        SyntaxKind::WHITESPACE,       // (space)
+        SyntaxKind::TEXT,             // Nested
+        SyntaxKind::NEWLINE,          //
+    ];
+    assert_eq!(
+        kinds, expected,
+        "Lexer should emit two BlockQuoteMarkers for nested quote"
+    );
+}

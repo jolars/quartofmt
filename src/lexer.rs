@@ -80,59 +80,85 @@ impl<'a> Lexer<'a> {
         if self.current_char() != Some('>') {
             return false;
         }
+
         let pos = self.pos;
         // Start of current line
         let line_start = self.input[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0);
-        // Indentation before '>'
         let prefix = &self.input[line_start..pos];
-        let mut indent = 0usize;
+
+        // Count indentation (spaces/tabs) before the first non-ws char on the line
+        let mut indent_cols = 0usize;
+        let mut idx_bytes = 0usize;
         for ch in prefix.chars() {
             match ch {
-                ' ' => indent += 1,
-                '\t' => indent += 4,
-                _ => return false, // non-whitespace before '>' => not BOL
-            }
-        }
-        if indent > 3 {
-            return false;
-        }
-
-        // Require blank line before block quote (Pandoc default), unless at BOF
-        if line_start == 0 {
-            return true;
-        }
-        let prev_line_end = line_start - 1;
-        let prev_line_start = self.input[..prev_line_end]
-            .rfind('\n')
-            .map(|i| i + 1)
-            .unwrap_or(0);
-        let prev_line = &self.input[prev_line_start..prev_line_end];
-
-        // If previous line is blank, ok
-        if prev_line
-            .trim_matches(|c| c == ' ' || c == '\t' || c == '\r')
-            .is_empty()
-        {
-            return true;
-        }
-
-        // Otherwise, allow continuation if previous line is itself a block quote line
-        let mut chars = prev_line.chars();
-        let mut prev_indent = 0usize;
-        loop {
-            match chars.clone().next() {
-                Some(' ') => {
-                    prev_indent += 1;
-                    chars.next();
+                ' ' => {
+                    indent_cols += 1;
+                    idx_bytes += 1;
                 }
-                Some('\t') => {
-                    prev_indent += 4;
-                    chars.next();
+                '\t' => {
+                    indent_cols += 4;
+                    idx_bytes += 1;
                 }
                 _ => break,
             }
         }
-        prev_indent <= 3 && chars.next() == Some('>')
+        if indent_cols > 3 {
+            return false;
+        }
+
+        // After indentation, allow only sequences of '>' and spaces before this '>'
+        // This permits nested markers on the same line like "> > Text" or ">> Text".
+        let rest = &prefix[idx_bytes..];
+        if !rest.chars().all(|c| c == '>' || c == ' ') {
+            // Some other non-whitespace content before '>' on this line
+            return false;
+        }
+
+        // Count how many '>' markers already appeared on this line before current pos.
+        let prior_markers = rest.chars().filter(|&c| c == '>').count();
+
+        // Enforce Pandoc's blank_before_blockquote only for the first '>' on the line.
+        if prior_markers == 0 {
+            // Require blank line before block quote (Pandoc default), unless at BOF
+            if line_start == 0 {
+                return true;
+            }
+            let prev_line_end = line_start - 1;
+            let prev_line_start = self.input[..prev_line_end]
+                .rfind('\n')
+                .map(|i| i + 1)
+                .unwrap_or(0);
+            let prev_line = &self.input[prev_line_start..prev_line_end];
+
+            // If previous line is blank, ok
+            if prev_line
+                .trim_matches(|c| c == ' ' || c == '\t' || c == '\r')
+                .is_empty()
+            {
+                return true;
+            }
+
+            // Otherwise, allow continuation if previous line is itself a block quote line
+            let mut chars = prev_line.chars();
+            let mut prev_indent = 0usize;
+            loop {
+                match chars.clone().next() {
+                    Some(' ') => {
+                        prev_indent += 1;
+                        chars.next();
+                    }
+                    Some('\t') => {
+                        prev_indent += 4;
+                        chars.next();
+                    }
+                    _ => break,
+                }
+            }
+            return prev_indent <= 3 && chars.next() == Some('>');
+        }
+
+        // Not the first '>' on the line (nested marker) -> allowed.
+        true
     }
 
     pub fn advance_while<F>(&mut self, mut predicate: F) -> usize

@@ -231,7 +231,21 @@ impl Formatter {
             }
 
             SyntaxKind::BlockQuote => {
-                // Format children (paragraphs, blank lines) with > prefix
+                // Determine nesting depth by counting ancestor BlockQuote nodes (including self)
+                let mut depth = 0usize;
+                let mut cur = Some(node.clone());
+                while let Some(n) = cur {
+                    if n.kind() == SyntaxKind::BlockQuote {
+                        depth += 1;
+                    }
+                    cur = n.parent();
+                }
+
+                // Prefixes for quoted content and blank quoted lines
+                let content_prefix = "> ".repeat(depth); // includes trailing space
+                let blank_prefix = content_prefix.trim_end(); // no trailing space
+
+                // Format children (paragraphs, blank lines) with proper > prefix per depth
                 let wrap_mode = self.config.wrap.clone().unwrap_or(WrapMode::Reflow);
 
                 for child in node.children() {
@@ -240,23 +254,25 @@ impl Formatter {
                             WrapMode::Preserve => {
                                 let text = child.text().to_string();
                                 for line in text.lines() {
-                                    self.output.push_str("> ");
+                                    self.output.push_str(&content_prefix);
                                     self.output.push_str(line);
                                     self.output.push('\n');
                                 }
                             }
                             WrapMode::Reflow => {
-                                let width = self.config.line_width.saturating_sub(2);
+                                let width =
+                                    self.config.line_width.saturating_sub(content_prefix.len());
                                 let lines = self.wrapped_lines_for_paragraph(&child, width);
                                 for line in lines {
-                                    self.output.push_str("> ");
+                                    self.output.push_str(&content_prefix);
                                     self.output.push_str(&line);
                                     self.output.push('\n');
                                 }
                             }
                         },
                         SyntaxKind::BlankLine => {
-                            self.output.push_str(">\n");
+                            self.output.push_str(blank_prefix);
+                            self.output.push('\n');
                         }
                         _ => {
                             // Handle other content within block quotes

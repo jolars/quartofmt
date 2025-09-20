@@ -487,6 +487,10 @@ impl<'a> Parser<'a> {
     fn parse_block_quote(&mut self) {
         self.builder.start_node(SyntaxKind::BlockQuote.into());
 
+        // Track whether the previous emitted child was a quoted blank line.
+        // Pandoc requires a blank line before starting a nested block quote.
+        let mut last_was_blank = false;
+
         // Start with the initial quoted line
         let mut first = true;
         while !self.at_eof() {
@@ -507,6 +511,18 @@ impl<'a> Parser<'a> {
                     self.builder.finish_node();
                     // Next line may start a new block quote paragraph
                     first = true;
+                    last_was_blank = true;
+                    continue;
+                }
+
+                // If there was a quoted blank line before, allow nested block quote:
+                // Detect an immediate second '>' to start a nested quote (Pandoc behavior).
+                if last_was_blank && self.at(SyntaxKind::BlockQuoteMarker) {
+                    // Recurse into nested block quote starting at this marker.
+                    self.parse_block_quote();
+                    // After nested block, reset state to look for next sibling in this quote
+                    first = true;
+                    last_was_blank = false;
                     continue;
                 }
             }
@@ -524,8 +540,6 @@ impl<'a> Parser<'a> {
                     self.advance();
                 }
 
-                // If the next line starts with BlockQuoteMarker, decide whether it's a blank quoted
-                // line (which should be a separate BlankLine node) or a normal continued quoted line.
                 if self.at(SyntaxKind::BlockQuoteMarker) {
                     // Look ahead without emitting into the paragraph
                     let mut tmp = self.pos + 1; // after '>'
@@ -539,11 +553,13 @@ impl<'a> Parser<'a> {
                         break;
                     }
 
-                    // Otherwise, it's a continued quoted line: skip the marker (and optional space)
-                    // so they are NOT included in the paragraph text.
-                    self.skip_token(); // skip '>'
-                    if self.at(SyntaxKind::WHITESPACE) {
-                        self.skip_token();
+                    // Otherwise, it's a continued quoted line. Strip all leading '>' markers
+                    // (and the whitespace after each) so they are NOT included in paragraph text.
+                    while self.at(SyntaxKind::BlockQuoteMarker) {
+                        self.skip_token(); // skip '>'
+                        if self.at(SyntaxKind::WHITESPACE) {
+                            self.skip_token();
+                        }
                     }
                     continue;
                 }
@@ -561,6 +577,7 @@ impl<'a> Parser<'a> {
             self.builder.finish_node();
             // After a paragraph, expect either a blank line or a new block quote marker
             first = true;
+            last_was_blank = false;
         }
 
         self.builder.finish_node();
@@ -1274,5 +1291,55 @@ fn parser_double_blockquote_not_nested_without_blank_line() {
     assert!(
         para_text.contains("Not nested"),
         "Block quote should include the second line"
+    );
+}
+
+#[test]
+fn parser_nested_blockquote_with_blank_line_is_nested() {
+    let input = "> This is a block quote.\n>\n> > A block quote within a block quote, which spans many lines. This is the second sentence, and it should lead to wrapping.\n";
+    let tree = crate::parser::parse(input);
+    let document = tree
+        .children()
+        .find(|n| n.kind() == crate::syntax::SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+
+    // Exactly one top-level BlockQuote
+    let top_level_bqs: Vec<_> = document
+        .children()
+        .filter(|n| n.kind() == crate::syntax::SyntaxKind::BlockQuote)
+        .collect();
+    assert_eq!(
+        top_level_bqs.len(),
+        1,
+        "There should be a single outer BlockQuote"
+    );
+
+    let outer = &top_level_bqs[0];
+    // It should contain a BlankLine and then a nested BlockQuote
+    let mut has_blank = false;
+    let mut nested: Option<_> = None;
+    for c in outer.children() {
+        if c.kind() == crate::syntax::SyntaxKind::BlankLine {
+            has_blank = true;
+        }
+        if c.kind() == crate::syntax::SyntaxKind::BlockQuote {
+            nested = Some(c);
+        }
+    }
+    assert!(
+        has_blank,
+        "Outer BlockQuote should contain a quoted blank line"
+    );
+    let nested = nested.expect("Nested BlockQuote node should exist");
+
+    // Nested block quote should have a paragraph with the expected text
+    let para = nested
+        .children()
+        .find(|n| n.kind() == crate::syntax::SyntaxKind::PARAGRAPH)
+        .expect("Nested paragraph");
+    let txt = para.text().to_string();
+    assert!(
+        txt.contains("A block quote within a block quote") && txt.contains("second sentence"),
+        "Nested paragraph text should be present"
     );
 }
