@@ -76,6 +76,65 @@ impl<'a> Lexer<'a> {
         self.peek_char(offset) == Some('.') && self.peek_char(offset + 1) == Some(' ')
     }
 
+    fn is_block_quote_marker(&self) -> bool {
+        if self.current_char() != Some('>') {
+            return false;
+        }
+        let pos = self.pos;
+        // Start of current line
+        let line_start = self.input[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0);
+        // Indentation before '>'
+        let prefix = &self.input[line_start..pos];
+        let mut indent = 0usize;
+        for ch in prefix.chars() {
+            match ch {
+                ' ' => indent += 1,
+                '\t' => indent += 4,
+                _ => return false, // non-whitespace before '>' => not BOL
+            }
+        }
+        if indent > 3 {
+            return false;
+        }
+
+        // Require blank line before block quote (Pandoc default), unless at BOF
+        if line_start == 0 {
+            return true;
+        }
+        let prev_line_end = line_start - 1;
+        let prev_line_start = self.input[..prev_line_end]
+            .rfind('\n')
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        let prev_line = &self.input[prev_line_start..prev_line_end];
+
+        // If previous line is blank, ok
+        if prev_line
+            .trim_matches(|c| c == ' ' || c == '\t' || c == '\r')
+            .is_empty()
+        {
+            return true;
+        }
+
+        // Otherwise, allow continuation if previous line is itself a block quote line
+        let mut chars = prev_line.chars();
+        let mut prev_indent = 0usize;
+        loop {
+            match chars.clone().next() {
+                Some(' ') => {
+                    prev_indent += 1;
+                    chars.next();
+                }
+                Some('\t') => {
+                    prev_indent += 4;
+                    chars.next();
+                }
+                _ => break,
+            }
+        }
+        prev_indent <= 3 && chars.next() == Some('>')
+    }
+
     pub fn advance_while<F>(&mut self, mut predicate: F) -> usize
     where
         F: FnMut(char) -> bool,
@@ -442,11 +501,20 @@ impl<'a> Lexer<'a> {
             }
 
             '>' => {
-                self.advance();
-                Some(Token {
-                    kind: SyntaxKind::BlockQuoteMarker,
-                    len: 1,
-                })
+                if self.is_block_quote_marker() {
+                    self.advance();
+                    Some(Token {
+                        kind: SyntaxKind::BlockQuoteMarker,
+                        len: 1,
+                    })
+                } else {
+                    // Not a valid block quote marker here; treat as text
+                    self.advance();
+                    Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len: 1,
+                    })
+                }
             }
 
             '-' | '+' | '*' if self.is_list_marker() => {

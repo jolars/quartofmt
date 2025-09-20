@@ -318,3 +318,64 @@ fn handle_actual_dollar() {
 
     assert_eq!(kinds, expected, "Lexer should treat dollar amounts as TEXT");
 }
+
+#[test]
+fn lexer_blockquote_marker_only_at_bol_and_max_three_spaces() {
+    let input = "    > Not a block quote (too much indent)\n\n > Valid block quote (one space)\n\n>Valid block quote\n\nfoo > not a block quote\n";
+    let tokens = crate::lexer::tokenize(input);
+
+    // Find all BlockQuoteMarker tokens and their positions
+    let positions: Vec<_> = tokens
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| t.kind == crate::syntax::SyntaxKind::BlockQuoteMarker)
+        .map(|(i, _)| i)
+        .collect();
+
+    // Should only emit BlockQuoteMarker for the two valid lines (2nd and 3rd logical lines)
+    assert_eq!(
+        positions.len(),
+        2,
+        "Should only emit BlockQuoteMarker for valid block quotes"
+    );
+}
+
+#[test]
+fn lexer_blockquote_requires_blank_line_unless_bof() {
+    let input = "Intro line\n> Not a block quote (no blank line before)\n\n> Valid block quote (after blank)\n";
+    let tokens = crate::lexer::tokenize(input);
+    let count = tokens
+        .iter()
+        .filter(|t| t.kind == crate::syntax::SyntaxKind::BlockQuoteMarker)
+        .count();
+    assert_eq!(
+        count, 1,
+        "Only the block quote after a blank line should be recognized"
+    );
+
+    // BOF case: allowed without preceding blank line
+    let input2 = "> Start of document\nNext line\n";
+    let tokens2 = crate::lexer::tokenize(input2);
+    let count2 = tokens2
+        .iter()
+        .filter(|t| t.kind == crate::syntax::SyntaxKind::BlockQuoteMarker)
+        .count();
+    assert_eq!(
+        count2, 1,
+        "Block quote at beginning of document should be recognized"
+    );
+}
+
+#[test]
+fn lexer_blockquote_more_than_three_spaces_is_not_marker_even_after_blank() {
+    let input = "\n    > Too much indent\n";
+    let tokens = crate::lexer::tokenize(input);
+    let count = tokens
+        .iter()
+        .filter(|t| t.kind == crate::syntax::SyntaxKind::BlockQuoteMarker)
+        .count();
+    assert_eq!(
+        count, 0,
+        "Indent > 3 spaces should not be a block quote marker"
+    );
+}
