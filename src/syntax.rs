@@ -52,11 +52,11 @@ pub enum SyntaxKind {
     SetextHeadingUnderline, // ===== or -----
 
     // LaTeX environments
-    LatexCommand, // \command{...}
-    LatexEnvironment,
-    LatexEnvBegin, // \begin{...}
-    LatexEnvEnd,   // \end{...}
-    LatexEnvContent,
+    LatexCommand,     // \command{...}
+    LatexEnvironment, // \begin{...}...\end{...}
+    LatexEnvBegin,    // \begin{...}
+    LatexEnvEnd,      // \end{...}
+    LatexEnvContent,  //
 
     // Tables
     SimpleTable,
