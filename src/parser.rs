@@ -783,6 +783,11 @@ impl<'a> Parser<'a> {
     }
 
     fn is_simple_table_start(&self) -> bool {
+        // Only consider table starts at the beginning of a line
+        if !self.at_bol() {
+            return false;
+        }
+
         // Try headered simple table:
         // 1) header line (TEXT/WHITESPACE), 2) dashed line, 3) at least one body row
         {
@@ -791,10 +796,19 @@ impl<'a> Parser<'a> {
             let mut saw_text = false;
             while pos < self.tokens.len() {
                 match self.tokens[pos].kind {
-                    SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
-                        saw_text = true;
+                    SyntaxKind::TEXT => {
+                        // First line must have some non-dash content; a dashed-only line
+                        // is not a header for the headered table form.
+                        let start = token_offset(&self.tokens, pos);
+                        let end = start + self.tokens[pos].len;
+                        let text = &self.input[start..end];
+                        let trimmed = text.trim();
+                        if !trimmed.is_empty() && !trimmed.chars().all(|c| c == '-' || c == ' ') {
+                            saw_text = true;
+                        }
                         pos += 1;
                     }
+                    SyntaxKind::WHITESPACE => pos += 1,
                     SyntaxKind::NEWLINE => {
                         pos += 1;
                         break;
@@ -812,7 +826,11 @@ impl<'a> Parser<'a> {
                             let end = start + self.tokens[pos].len;
                             let text = &self.input[start..end];
                             log::debug!("SimpleTable candidate line {pos}: {text}");
-                            if text.trim().chars().all(|c| c == '-' || c == ' ') {
+                            let trimmed = text.trim();
+                            if !trimmed.is_empty()
+                                && trimmed.contains('-')
+                                && trimmed.chars().all(|c| c == '-' || c == ' ')
+                            {
                                 saw_dash = true;
                                 pos += 1;
                             } else {
@@ -843,7 +861,7 @@ impl<'a> Parser<'a> {
                             SyntaxKind::NEWLINE => {
                                 break;
                             }
-                            _ => return false,
+                            _ => break,
                         }
                     }
                     if saw_row {
@@ -871,7 +889,7 @@ impl<'a> Parser<'a> {
                             saw_dash = true;
                             pos += 1;
                         } else {
-                            return false;
+                            break;
                         }
                     }
                     SyntaxKind::WHITESPACE => {
@@ -881,69 +899,139 @@ impl<'a> Parser<'a> {
                         pos += 1;
                         break;
                     }
-                    _ => return false,
+                    _ => break,
                 }
-            }
-            if !saw_dash {
-                return false;
             }
 
-            // 2. At least one body row line (TEXT/WHITESPACE until NEWLINE)
-            let mut saw_row = false;
-            while pos < self.tokens.len() {
-                match self.tokens[pos].kind {
-                    SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
-                        saw_row = true;
+            if !saw_dash {
+                log::debug!(
+                    "Headerless SimpleTable: no dashed line found at start; pos={:?}",
+                    self.pos
+                );
+                self.debug_next_few_tokens();
+            } else {
+                log::debug!("Headerless SimpleTable dashed line found");
+
+                // 2. At least one body row line (TEXT/WHITESPACE until NEWLINE)
+                let mut saw_row = false;
+                while pos < self.tokens.len() {
+                    match self.tokens[pos].kind {
+                        SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
+                            saw_row = true;
+                            pos += 1;
+                        }
+                        SyntaxKind::NEWLINE => {
+                            break;
+                        }
+                        _ => break,
+                    }
+                }
+
+                if !saw_row {
+                    log::debug!("Headerless SimpleTable: no body row found after dashed line");
+                } else {
+                    log::debug!("Headerless SimpleTable body row found");
+
+                    // 3. Require a closing dashed line
+                    if pos < self.tokens.len() && self.tokens[pos].kind == SyntaxKind::NEWLINE {
                         pos += 1;
                     }
-                    SyntaxKind::NEWLINE => {
-                        break;
+
+                    let mut saw_closing_dash = false;
+                    while pos < self.tokens.len() {
+                        match self.tokens[pos].kind {
+                            SyntaxKind::TEXT => {
+                                let start = token_offset(&self.tokens, pos);
+                                let end = start + self.tokens[pos].len;
+                                let text = &self.input[start..end];
+                                let trimmed = text.trim();
+                                if !trimmed.is_empty()
+                                    && trimmed.contains('-')
+                                    && trimmed.chars().all(|c| c == '-' || c == ' ')
+                                {
+                                    saw_closing_dash = true;
+                                    pos += 1;
+                                } else {
+                                    // Not a dashed line -> not a headerless simple table
+                                    break;
+                                }
+                            }
+                            SyntaxKind::WHITESPACE => {
+                                pos += 1;
+                            }
+                            SyntaxKind::NEWLINE => {
+                                // end of closing dashed line
+                                break;
+                            }
+                            _ => {
+                                log::debug!(
+                                    "Headerless SimpleTable: unexpected token after body row: {:?}",
+                                    self.tokens[pos]
+                                );
+                                break;
+                            }
+                        }
                     }
-                    _ => return false,
+
+                    log::debug!(
+                        "Headerless SimpleTable closing dashed line found: saw_closing_dash={saw_closing_dash}"
+                    );
+
+                    if saw_closing_dash {
+                        return true;
+                    }
                 }
-            }
-            if saw_row {
-                return true;
             }
         }
 
+        // Return true if either table format was detected
         false
     }
 
     fn parse_simple_table(&mut self) {
         self.builder.start_node(SyntaxKind::SimpleTable.into());
+
         // Parse lines until we hit a blank line or a non-table line
-        let mut _line_count = 0;
         while !self.at_eof() {
-            // Stop on blank line or if not TEXT/WHITESPACE/NEWLINE
+            // Check if this line has table content
             let mut temp_pos = self.pos;
             let mut saw_content = false;
+            let mut line_tokens = Vec::new();
+
+            // Collect tokens for this line
             while temp_pos < self.tokens.len() {
                 match self.tokens[temp_pos].kind {
                     SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
                         saw_content = true;
+                        line_tokens.push(temp_pos);
                         temp_pos += 1;
                     }
                     SyntaxKind::NEWLINE => {
+                        line_tokens.push(temp_pos);
                         temp_pos += 1;
                         break;
                     }
                     _ => break,
                 }
             }
+
+            // If no content found, we've reached the end of the table
             if !saw_content {
                 break;
             }
-            // Consume this line, logging each token's text
-            while self.pos < temp_pos {
-                let start = token_offset(&self.tokens, self.pos);
-                let end = start + self.tokens[self.pos].len;
-                let text = &self.input[start..end];
-                log::debug!("SimpleTable line token {}: {:?}", self.pos, text);
-                self.advance();
+
+            // Consume all tokens for this line (including the newline)
+            for _ in 0..line_tokens.len() {
+                if self.pos < self.tokens.len() {
+                    let start = token_offset(&self.tokens, self.pos);
+                    let end = start + self.tokens[self.pos].len;
+                    let text = &self.input[start..end];
+                    log::debug!("SimpleTable line token {}: {:?}", self.pos, text);
+                    self.advance();
+                }
             }
-            _line_count += 1;
         }
+
         self.builder.finish_node();
     }
 
@@ -1400,5 +1488,24 @@ fn parser_nested_blockquote_with_blank_line_is_nested() {
     assert!(
         txt.contains("A block quote within a block quote") && txt.contains("second sentence"),
         "Nested paragraph text should be present"
+    );
+}
+
+#[test]
+fn parser_headerless_table_without_closing_dashes_is_not_table() {
+    // Headerless simple tables must end with a dashed line; otherwise it is not a table.
+    let input = "-------     ------ ----------   -------\n\
+                 Text not part of table\n";
+    let tree = crate::parser::parse(input);
+    let document = tree
+        .children()
+        .find(|n| n.kind() == crate::syntax::SyntaxKind::DOCUMENT)
+        .expect("DOCUMENT node");
+    let has_simple_table = document
+        .children()
+        .any(|n| n.kind() == crate::syntax::SyntaxKind::SimpleTable);
+    assert!(
+        !has_simple_table,
+        "Headerless simple table must have a closing dashed line"
     );
 }
