@@ -1,0 +1,3 @@
+*.qmd text eol=lf
+*.md text eol=lf
+tests/cases/**/* text eol=lf
