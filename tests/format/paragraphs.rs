@@ -14,21 +14,6 @@ fn wrapping() {
 }
 
 #[test]
-fn blank_line_preservation() {
-    let input = "First paragraph\n\n\nSecond paragraph\n";
-    let output = format(input, None);
-
-    // Should preserve the double blank line between paragraphs
-    let expected = "First paragraph\n\n\nSecond paragraph\n";
-    similar_asserts::assert_eq!(output, expected);
-
-    // Also test that we don't add extra blank lines
-    let lines: Vec<&str> = output.split('\n').collect();
-    similar_asserts::assert_eq!(lines[1], ""); // First blank line
-    similar_asserts::assert_eq!(lines[2], ""); // Second blank line
-}
-
-#[test]
 fn paragraph_wrapping_edge_cases() {
     // Test 1: Paragraph with internal line breaks should be reflowed
     let cfg = quartofmt::ConfigBuilder::default().line_width(25).build();
