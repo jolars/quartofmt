@@ -5,32 +5,22 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-fn default_line_width() -> usize {
-    80
-}
-fn default_math_indent() -> usize {
-    0
-}
-
 #[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
 pub struct Config {
-    #[serde(default = "default_line_width")]
-    pub line_width: usize,
-    #[serde(default)]
-    pub wrap: Option<WrapMode>,
-    #[serde(default = "default_math_indent")]
-    pub math_indent: usize,
-    #[serde(default)]
     pub line_ending: Option<LineEnding>,
+    pub line_width: usize,
+    pub math_indent: usize,
+    pub wrap: Option<WrapMode>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            line_width: 80,
-            wrap: None,
-            math_indent: default_math_indent(),
             line_ending: Some(LineEnding::Auto),
+            line_width: 80,
+            math_indent: 0,
+            wrap: Some(WrapMode::Reflow),
         }
     }
 }
@@ -150,11 +140,11 @@ pub fn load(explicit: Option<&Path>, start_dir: &Path) -> io::Result<(Config, Op
 }
 
 #[test]
-fn config_missing_fields_panics_on_unwrap() {
+fn missing_fields_panics_on_unwrap() {
     let toml_str = r#"
         wrap = "reflow"
     "#;
-    let cfg = toml::from_str::<Config>(toml_str).expect("Should parse config");
+    let cfg = toml::from_str::<Config>(toml_str).unwrap();
     let line_width = cfg.line_width; // This will panic and fail the test
     assert_eq!(line_width, 80);
 }
