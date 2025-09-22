@@ -8,4 +8,5 @@ Table: Demonstration of simple table syntax.
 
 ----   ---- ---
   12     45  34
+ 12    45   1
 ----   ---- ---

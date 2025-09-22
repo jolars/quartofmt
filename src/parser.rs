@@ -990,47 +990,42 @@ impl<'a> Parser<'a> {
 
     fn parse_simple_table(&mut self) {
         self.builder.start_node(SyntaxKind::SimpleTable.into());
-
         // Parse lines until we hit a blank line or a non-table line
+        let mut _line_count = 0;
         while !self.at_eof() {
-            // Check if this line has table content
+            // Stop on blank line or if not TEXT/WHITESPACE/NEWLINE
             let mut temp_pos = self.pos;
             let mut saw_content = false;
-            let mut line_tokens = Vec::new();
-
-            // Collect tokens for this line
             while temp_pos < self.tokens.len() {
                 match self.tokens[temp_pos].kind {
                     SyntaxKind::TEXT | SyntaxKind::WHITESPACE => {
                         saw_content = true;
-                        line_tokens.push(temp_pos);
                         temp_pos += 1;
                     }
                     SyntaxKind::NEWLINE => {
-                        line_tokens.push(temp_pos);
+                        temp_pos += 1;
                         break;
                     }
                     _ => break,
                 }
             }
-
-            // If no content found, we've reached the end of the table
             if !saw_content {
                 break;
             }
-
-            // Consume all tokens for this line (including the newline)
-            for _ in 0..line_tokens.len() {
-                if self.pos < self.tokens.len() {
-                    let start = token_offset(&self.tokens, self.pos);
-                    let end = start + self.tokens[self.pos].len;
-                    let text = &self.input[start..end];
-                    log::debug!("SimpleTable line token {}: {:?}", self.pos, text);
-                    self.advance();
-                }
+            // Consume this line, logging each token's text
+            while self.pos < temp_pos {
+                let start = token_offset(&self.tokens, self.pos);
+                let end = start + self.tokens[self.pos].len;
+                let text = &self.input[start..end];
+                log::debug!("SimpleTable line token {}: {:?}", self.pos, text);
+                self.advance();
             }
+            // Explicitly consume the trailing NEWLINE for each line, if present
+            if self.at(SyntaxKind::NEWLINE) {
+                self.advance();
+            }
+            // _line_count += 1;
         }
-
         self.builder.finish_node();
     }
 
