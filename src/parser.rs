@@ -1008,7 +1008,6 @@ impl<'a> Parser<'a> {
                     }
                     SyntaxKind::NEWLINE => {
                         line_tokens.push(temp_pos);
-                        temp_pos += 1;
                         break;
                     }
                     _ => break,
