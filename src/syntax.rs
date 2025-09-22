@@ -28,6 +28,11 @@ pub enum SyntaxKind {
     MathBlock,
     MathContent,
 
+    // Footnotes
+    InlineFootnoteStart, // ^[
+    InlineFootnoteEnd,   // ]
+    InlineFootnote,      // ^[text]
+
     // Code
     CodeSpan,
     CodeFenceMarker, // ``` or ~~~

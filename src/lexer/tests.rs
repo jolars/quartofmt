@@ -24,6 +24,8 @@ fn lexer_math_block_tokens() {
             SyntaxKind::BlockMathMarker, // $$
             SyntaxKind::NEWLINE,         //
             SyntaxKind::TEXT,            // f(x) = x^2
+            SyntaxKind::TEXT,            // ^
+            SyntaxKind::TEXT,            // 2
             SyntaxKind::NEWLINE,         //
             SyntaxKind::BlockMathMarker, // $$
             SyntaxKind::WHITESPACE,      //
@@ -47,6 +49,8 @@ fn lexer_inline_math_tokens() {
             SyntaxKind::WHITESPACE,       //
             SyntaxKind::InlineMathMarker, // $
             SyntaxKind::TEXT,             // x^2
+            SyntaxKind::TEXT,             // x
+            SyntaxKind::TEXT,             // 2
             SyntaxKind::InlineMathMarker, // $
             SyntaxKind::WHITESPACE,       //
             SyntaxKind::TEXT,             // inline
@@ -80,6 +84,8 @@ fn lexer_triple_dollar_block_math() {
             SyntaxKind::BlockMathMarker, // $$$
             SyntaxKind::NEWLINE,         //
             SyntaxKind::TEXT,            // f(x)=x^2
+            SyntaxKind::TEXT,            // ^
+            SyntaxKind::TEXT,            // 2
             SyntaxKind::NEWLINE,         //
             SyntaxKind::BlockMathMarker, // $$$
             SyntaxKind::NEWLINE,         //
@@ -160,7 +166,7 @@ fn lexer_list_marker_bol_only() {
 }
 
 #[test]
-fn lexer_nested_list_tokens() {
+fn nested_list_tokens() {
     let input = "- Top level\n  - Nested level 1\n    - Nested level 2\n";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -404,5 +410,40 @@ fn lexer_nested_blockquote_after_blank_line_has_two_markers_on_line() {
     assert_eq!(
         kinds, expected,
         "Lexer should emit two BlockQuoteMarkers for nested quote"
+    );
+}
+
+#[test]
+fn inline_footnote_tokens() {
+    let input = "This is a footnote^[with some text] in a sentence.";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+
+    let expected = vec![
+        SyntaxKind::TEXT,                // This
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // is
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // a
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // footnote
+        SyntaxKind::InlineFootnoteStart, // ^[
+        SyntaxKind::TEXT,                // with
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // some
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // text
+        SyntaxKind::InlineFootnoteEnd,   // ]
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // in
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // a
+        SyntaxKind::WHITESPACE,          // (space)
+        SyntaxKind::TEXT,                // sentence.
+    ];
+
+    assert_eq!(
+        kinds, expected,
+        "Lexer should tokenize inline footnotes correctly"
     );
 }

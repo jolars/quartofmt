@@ -62,13 +62,38 @@ impl Formatter {
                 }
             }
 
-            fn push_piece(&mut self, text: &str) {
-                self.flush_pending();
+            fn attach_to_previous(&mut self, text: &str) {
+                if let Some(pos) = self.last_piece_pos {
+                    let prev_idx = self.piece_idx[pos];
+                    let prev = &self.arena[prev_idx];
+                    let mut combined = String::with_capacity(prev.len() + text.len());
+                    combined.push_str(prev);
+                    combined.push_str(text);
+                    self.arena.push(combined.into_boxed_str());
+                    let new_idx = self.arena.len() - 1;
+                    self.piece_idx[pos] = new_idx;
+                } else {
+                    // No previous piece; start a new one.
+                    self.start_new_piece(text);
+                }
+            }
+
+            fn start_new_piece(&mut self, text: &str) {
                 self.arena.push(Box::<str>::from(text));
                 let idx = self.arena.len() - 1;
                 self.piece_idx.push(idx);
                 self.whitespace_after.push(false);
                 self.last_piece_pos = Some(self.piece_idx.len() - 1);
+            }
+
+            // Glue when there was no whitespace; otherwise start a new word and mark the space.
+            fn push_piece(&mut self, text: &str) {
+                if self.pending_space {
+                    self.flush_pending();
+                    self.start_new_piece(text);
+                } else {
+                    self.attach_to_previous(text);
+                }
             }
         }
 
@@ -207,7 +232,7 @@ impl Formatter {
             }
 
             SyntaxKind::LatexEnvironment => {
-                // // Output the environment exactly as written
+                // Output the environment exactly as written
                 let text = node.text().to_string();
                 self.output.push_str(&text);
                 if !text.ends_with('\n') {

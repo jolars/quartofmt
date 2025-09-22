@@ -1,0 +1,2 @@
+Here's a paragraph with a long
+inline^[footnote that could be broken at the marker] but should not.

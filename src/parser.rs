@@ -34,21 +34,6 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.pos)
     }
 
-    fn debug_next_few_tokens(&self) {
-        log::debug!("Next few tokens starting at pos {}:", self.pos);
-        for i in 0..5 {
-            if let Some(token) = self.tokens.get(self.pos + i) {
-                let start = self.tokens[..self.pos + i]
-                    .iter()
-                    .map(|t| t.len)
-                    .sum::<usize>();
-                let end = start + token.len;
-                let text = &self.input[start..end];
-                log::debug!("  {}: {:?} = {:?}", self.pos + i, token.kind, text);
-            }
-        }
-    }
-
     fn token_text(&self, idx: usize) -> &str {
         let start = self.tokens[..idx].iter().map(|t| t.len).sum::<usize>();
         let end = start + self.tokens[idx].len;
@@ -107,8 +92,10 @@ impl<'a> Parser<'a> {
 
         log::debug!("Starting document parse");
 
-        // Uncomment for debugging:
-        self.debug_tokens();
+        #[cfg(debug_assertions)]
+        {
+            self.debug_tokens();
+        }
 
         // Check for frontmatter at the beginning
         if self.at(SyntaxKind::FrontmatterDelim) {
@@ -250,6 +237,24 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
+    fn parse_inline_footnote(&mut self) {
+        self.builder.start_node(SyntaxKind::InlineFootnote.into());
+        self.advance(); // consume ^[
+        // Content until closing ]
+        while !self.at_eof() && !self.at(SyntaxKind::InlineFootnoteEnd) {
+            self.advance();
+        }
+        if self.at(SyntaxKind::InlineFootnoteEnd) {
+            self.advance(); // consume ]
+        }
+        self.builder.finish_node();
+        log::debug!("Finished inline footnote at pos {}", self.pos);
+        log::trace!(
+            "Current token after inline footnote: {:?}",
+            self.current_token()
+        );
+    }
+
     fn parse_code_block(&mut self) {
         self.builder.start_node(SyntaxKind::CodeBlock.into());
 
@@ -317,7 +322,6 @@ impl<'a> Parser<'a> {
 
     fn parse_fenced_div(&mut self) {
         log::debug!("Starting parse_fenced_div at pos {}", self.pos);
-        self.debug_next_few_tokens();
 
         self.builder.start_node(SyntaxKind::FencedDiv.into());
 
@@ -725,6 +729,11 @@ impl<'a> Parser<'a> {
                     self.parse_inline_math();
                 }
 
+                Some(SyntaxKind::InlineFootnoteStart) => {
+                    log::trace!("Paragraph: parsing inline footnote");
+                    self.parse_inline_footnote();
+                }
+
                 Some(SyntaxKind::WHITESPACE) => {
                     log::trace!("Paragraph iteration {iterations}: advancing whitespace");
                     self.advance();
@@ -903,13 +912,7 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            if !saw_dash {
-                log::debug!(
-                    "Headerless SimpleTable: no dashed line found at start; pos={:?}",
-                    self.pos
-                );
-                self.debug_next_few_tokens();
-            } else {
+            if saw_dash {
                 log::debug!("Headerless SimpleTable dashed line found");
 
                 // 2. At least one body row line (TEXT/WHITESPACE until NEWLINE)

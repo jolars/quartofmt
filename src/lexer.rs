@@ -418,6 +418,15 @@ impl<'a> Lexer<'a> {
                 })
             }
 
+            '^' if self.starts_with("^[") => {
+                self.advance(); // consume ^
+                self.advance(); // consume [
+                Some(Token {
+                    kind: SyntaxKind::InlineFootnoteStart,
+                    len: 2,
+                })
+            }
+
             '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {
                 let start_pos = self.pos;
                 let ch = self.current_char().unwrap();
@@ -526,6 +535,14 @@ impl<'a> Lexer<'a> {
                 })
             }
 
+            ']' => {
+                self.advance();
+                Some(Token {
+                    kind: SyntaxKind::InlineFootnoteEnd,
+                    len: 1,
+                })
+            }
+
             '>' => {
                 if self.is_block_quote_marker() {
                     self.advance();
@@ -596,7 +613,10 @@ impl<'a> Lexer<'a> {
                 let start = self.pos;
                 while let Some(c) = self.current_char() {
                     // Base stop set
-                    if matches!(c, '\n' | ' ' | '\t' | '\r' | '`' | '~' | '$' | '[' | '\\') {
+                    if matches!(
+                        c,
+                        '\n' | ' ' | '^' | '\t' | '\r' | '`' | '~' | '$' | '[' | ']' | '\\'
+                    ) {
                         break;
                     }
                     // Stop before HTML comment delimiters so they can be tokenized

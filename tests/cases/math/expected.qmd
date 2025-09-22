@@ -11,5 +11,5 @@ $$
 E=mc^2.
 $$
 
-$\alpha$ is the **acceptance probability** and $g(y)/\alpha$ the **envelope** of
-$f$.
+$\alpha$ is the **acceptance probability** and $g(y)/\alpha$ the **envelope**
+of $f$.
