@@ -20,14 +20,17 @@ pub struct Config {
     pub wrap: Option<WrapMode>,
     #[serde(default = "default_math_indent")]
     pub math_indent: usize,
+    #[serde(default)]
+    pub line_ending: Option<LineEnding>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            line_width: default_line_width(),
+            line_width: 80,
             wrap: None,
             math_indent: default_math_indent(),
+            line_ending: Some(LineEnding::Auto),
         }
     }
 }
@@ -48,6 +51,11 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn line_ending(mut self, ending: LineEnding) -> Self {
+        self.config.line_ending = Some(ending);
+        self
+    }
+
     pub fn build(self) -> Config {
         self.config
     }
@@ -58,6 +66,14 @@ impl ConfigBuilder {
 pub enum WrapMode {
     Preserve,
     Reflow,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum LineEnding {
+    Auto,
+    Lf,
+    Crlf,
 }
 
 const CANDIDATE_NAMES: &[&str] = &[".quartofmt.toml", "quartofmt.toml"];

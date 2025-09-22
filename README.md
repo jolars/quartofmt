@@ -41,6 +41,7 @@ quartofmt looks for a configuration in:
 
 ```toml
 line_width = 80
+line-ending = "auto"
 ```
 
 ## Motivation
