@@ -24,6 +24,30 @@ impl<'a> Lexer<'a> {
         self.input[self.pos..].chars().nth(offset)
     }
 
+    pub fn at_eol(&self) -> bool {
+        self.current_char() == Some('\n') || self.pos >= self.input.len()
+    }
+
+    pub fn at_bol(&self) -> bool {
+        if self.pos == 0 {
+            return true;
+        }
+
+        let mut i = self.pos;
+
+        while i > 0 {
+            let ch = self.input[..i].chars().next_back().unwrap();
+            if ch == '\n' {
+                return true;
+            } else if !ch.is_whitespace() {
+                return false;
+            }
+            i -= ch.len_utf8();
+        }
+
+        true
+    }
+
     pub fn advance(&mut self) -> Option<char> {
         if let Some(ch) = self.current_char() {
             self.pos += ch.len_utf8();
@@ -195,6 +219,22 @@ impl<'a> Lexer<'a> {
 
         let ch = self.current_char()?;
 
+        if self.at_bol() {
+            match ch {
+                // Code fence (``` or ~~~)
+                '`' | '~' if self.starts_with("```") || self.starts_with("~~~") => {
+                    let tick_count = self.advance_while(|c| c == '`' || c == '~');
+                    if tick_count >= 3 {
+                        return Some(Token {
+                            kind: SyntaxKind::CodeFenceMarker,
+                            len: tick_count,
+                        });
+                    }
+                }
+                _ => { /* continue processing below */ }
+            }
+        }
+
         // Detect LaTeX environment begin: \begin{...}
         if self.starts_with("\\begin{") {
             let start_pos = self.pos;
@@ -327,39 +367,23 @@ impl<'a> Lexer<'a> {
                 })
             }
 
+            // Inline code span: consume until matching number of backticks
             '`' => {
-                // Distinguish between code block fence (``` at BOL) and inline code span (`...`)
                 let start_pos = self.pos;
                 let tick_count = self.advance_while(|c| c == '`');
-                // Code block fence: 3 or more backticks at BOL or after newline
-                let is_bol = start_pos == 0 || self.input[..start_pos].ends_with('\n');
-                if tick_count >= 3 && is_bol {
-                    Some(Token {
-                        kind: SyntaxKind::CodeFenceMarker,
-                        len: tick_count,
-                    })
-                } else {
-                    // Inline code span: consume until matching number of backticks
-                    while self.pos < self.input.len() {
-                        if self.starts_with(&"`".repeat(tick_count)) {
-                            self.advance_while(|c| c == '`');
-                            break;
-                        } else {
-                            self.advance();
-                        }
-                    }
-                    let len = self.pos - start_pos;
-                    Some(Token {
-                        kind: SyntaxKind::CodeSpan,
-                        len,
-                    })
-                }
-            }
 
-            '~' if self.starts_with("~~~") => {
-                let len = self.advance_while(|c| c == '~');
+                while self.pos < self.input.len() {
+                    if self.starts_with(&"`".repeat(tick_count)) {
+                        self.advance_while(|c| c == '`');
+                        break;
+                    } else {
+                        self.advance();
+                    }
+                }
+                let len = self.pos - start_pos;
+
                 Some(Token {
-                    kind: SyntaxKind::CodeFenceMarker,
+                    kind: SyntaxKind::CodeSpan,
                     len,
                 })
             }
