@@ -242,6 +242,25 @@ impl<'a> Lexer<'a> {
                     });
                 }
 
+                '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {
+                    let start_pos = self.pos;
+                    let ch = self.current_char().unwrap();
+                    let len = self.advance_while(|c| c == ch);
+                    let is_start_of_file = start_pos == 0;
+                    let is_after_newline = start_pos > 0 && self.input[..start_pos].ends_with('\n');
+                    if (is_start_of_file || is_after_newline) && len == 3 {
+                        return Some(Token {
+                            kind: SyntaxKind::FrontmatterDelim,
+                            len,
+                        });
+                    } else {
+                        return Some(Token {
+                            kind: SyntaxKind::TEXT,
+                            len,
+                        });
+                    }
+                }
+
                 _ => { /* continue processing below */ }
             }
         }
@@ -452,25 +471,6 @@ impl<'a> Lexer<'a> {
                     kind: SyntaxKind::InlineFootnoteStart,
                     len: 2,
                 })
-            }
-
-            '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {
-                let start_pos = self.pos;
-                let ch = self.current_char().unwrap();
-                let len = self.advance_while(|c| c == ch);
-                let is_start_of_file = start_pos == 0;
-                let is_after_newline = start_pos > 0 && self.input[..start_pos].ends_with('\n');
-                if (is_start_of_file || is_after_newline) && len == 3 {
-                    Some(Token {
-                        kind: SyntaxKind::FrontmatterDelim,
-                        len,
-                    })
-                } else {
-                    Some(Token {
-                        kind: SyntaxKind::TEXT,
-                        len,
-                    })
-                }
             }
 
             '<' if self.starts_with("<!--") => {
