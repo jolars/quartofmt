@@ -28,24 +28,23 @@ impl<'a> Lexer<'a> {
         self.current_char() == Some('\n') || self.pos >= self.input.len()
     }
 
-    pub fn at_bol(&self) -> bool {
+    pub fn at_bol_with_indent(&self) -> Option<usize> {
+        // Returns Some(indent) if at BOL and indent <= 3, else None
         if self.pos == 0 {
-            return true;
+            return Some(0);
         }
-
-        let mut i = self.pos;
-
-        while i > 0 {
-            let ch = self.input[..i].chars().next_back().unwrap();
-            if ch == '\n' {
-                return true;
-            } else if !ch.is_whitespace() {
-                return false;
+        let pos = self.pos;
+        let line_start = self.input[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0);
+        let prefix = &self.input[line_start..pos];
+        let mut indent = 0;
+        for ch in prefix.chars() {
+            match ch {
+                ' ' => indent += 1,
+                '\t' => indent += 4,
+                _ => return None, // Non-whitespace before marker: not BOL
             }
-            i -= ch.len_utf8();
         }
-
-        true
+        if indent <= 3 { Some(indent) } else { None }
     }
 
     pub fn advance(&mut self) -> Option<char> {
@@ -219,7 +218,10 @@ impl<'a> Lexer<'a> {
 
         let ch = self.current_char()?;
 
-        if self.at_bol() {
+        let indent = self.at_bol_with_indent();
+
+        if let Some(_indent) = indent {
+            // At BOL with up to 3 spaces/tabs of indent
             match ch {
                 // Code fence (``` or ~~~)
                 '`' | '~' if self.starts_with("```") || self.starts_with("~~~") => {
