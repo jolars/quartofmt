@@ -233,6 +233,15 @@ impl<'a> Lexer<'a> {
                         });
                     }
                 }
+
+                ':' if self.starts_with(":::") => {
+                    let len = self.advance_while(|c| c == ':');
+                    return Some(Token {
+                        kind: SyntaxKind::DivMarker,
+                        len,
+                    });
+                }
+
                 _ => { /* continue processing below */ }
             }
         }
@@ -386,14 +395,6 @@ impl<'a> Lexer<'a> {
 
                 Some(Token {
                     kind: SyntaxKind::CodeSpan,
-                    len,
-                })
-            }
-
-            ':' if self.starts_with(":::") => {
-                let len = self.advance_while(|c| c == ':');
-                Some(Token {
-                    kind: SyntaxKind::DivMarker,
                     len,
                 })
             }
