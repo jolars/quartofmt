@@ -15,6 +15,7 @@ pub enum SyntaxKind {
     CommentStart,     // <!--
     CommentEnd,       // -->
     Attribute,        // {#label} for headings, math, etc.
+    HorizontalRule,   // --- or *** or ___
 
     // Links
     LinkStart, // [

@@ -447,3 +447,49 @@ fn inline_footnote_tokens() {
         "Lexer should tokenize inline footnotes correctly"
     );
 }
+
+#[test]
+fn horizontal_rule() {
+    let input = "Above\n\n---\n\nBelow\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+
+    let expected = vec![
+        SyntaxKind::TEXT,           // Some
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::HorizontalRule, // ---
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::TEXT,           // below
+        SyntaxKind::NEWLINE,        //
+    ];
+
+    assert_eq!(
+        kinds, expected,
+        "Lexer should tokenize horizontal rules correctly"
+    );
+}
+
+#[test]
+fn horizontal_rule_spaced() {
+    let input = "Above\n\n* * * * *\n\nBelow\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+
+    let expected = vec![
+        SyntaxKind::TEXT,           // Some
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::HorizontalRule, // * * * * *
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::NEWLINE,        //
+        SyntaxKind::TEXT,           // below
+        SyntaxKind::NEWLINE,        //
+    ];
+
+    assert_eq!(
+        kinds, expected,
+        "Lexer should tokenize horizontal rules with spaces correctly"
+    );
+}

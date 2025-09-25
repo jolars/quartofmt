@@ -28,6 +28,59 @@ impl<'a> Lexer<'a> {
         self.current_char() == Some('\n') || self.pos >= self.input.len()
     }
 
+    pub fn has_blankline_before(&self) -> bool {
+        if self.pos == 0 {
+            return true; // BOF counts as blank line before
+        }
+        let pos = self.pos;
+        let line_start = self.input[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0);
+        let prev_line_end = line_start.saturating_sub(1);
+        if prev_line_end == 0 || prev_line_end > self.input.len() {
+            return true;
+        }
+        let prev_line_start = self.input[..prev_line_end]
+            .rfind('\n')
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        if prev_line_end < prev_line_start || prev_line_end > self.input.len() {
+            return true;
+        }
+        let prev_line = &self.input[prev_line_start..prev_line_end];
+        prev_line
+            .trim_matches(|c| c == ' ' || c == '\t' || c == '\r')
+            .is_empty()
+    }
+
+    pub fn has_blankline_after(&self) -> bool {
+        let pos = self.pos;
+        if pos >= self.input.len() {
+            return true; // EOF counts as blank line after
+        }
+        let line_end = self.input[pos..]
+            .find('\n')
+            .map(|i| pos + i)
+            .unwrap_or(self.input.len());
+        let next_line_start = line_end + 1;
+        if next_line_start >= self.input.len() {
+            return true;
+        }
+        let next_line_end = self.input[next_line_start..]
+            .find('\n')
+            .map(|i| next_line_start + i)
+            .unwrap_or(self.input.len());
+        if next_line_end < next_line_start || next_line_end > self.input.len() {
+            return true;
+        }
+        let next_line = &self.input[next_line_start..next_line_end];
+        next_line
+            .trim_matches(|c| c == ' ' || c == '\t' || c == '\r')
+            .is_empty()
+    }
+
+    pub fn surrounded_by_blanklines(&self) -> bool {
+        self.has_blankline_before() && self.has_blankline_after()
+    }
+
     pub fn at_bol_with_indent(&self) -> Option<usize> {
         // Returns Some(indent) if at BOL and indent <= 3, else None
         if self.pos == 0 {
@@ -240,6 +293,21 @@ impl<'a> Lexer<'a> {
                         kind: SyntaxKind::DivMarker,
                         len,
                     });
+                }
+
+                '-' if self.surrounded_by_blanklines()
+                    && (self.starts_with("---")
+                        || self.starts_with("***")
+                        || self.starts_with("- - -")
+                        || self.starts_with("* * *")) =>
+                {
+                    let len = self.advance_while(|c| c == '-' || c == ' ' || c == '*');
+                    if len >= 3 {
+                        return Some(Token {
+                            kind: SyntaxKind::HorizontalRule,
+                            len,
+                        });
+                    }
                 }
 
                 '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {
