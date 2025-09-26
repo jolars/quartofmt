@@ -457,10 +457,10 @@ fn horizontal_rule() {
     let expected = vec![
         SyntaxKind::TEXT,           // Some
         SyntaxKind::NEWLINE,        //
-        SyntaxKind::NEWLINE,        //
+        SyntaxKind::BlankLine,      //
         SyntaxKind::HorizontalRule, // ---
         SyntaxKind::NEWLINE,        //
-        SyntaxKind::NEWLINE,        //
+        SyntaxKind::BlankLine,      //
         SyntaxKind::TEXT,           // below
         SyntaxKind::NEWLINE,        //
     ];
@@ -480,10 +480,10 @@ fn horizontal_rule_spaced() {
     let expected = vec![
         SyntaxKind::TEXT,           // Some
         SyntaxKind::NEWLINE,        //
-        SyntaxKind::NEWLINE,        //
+        SyntaxKind::BlankLine,      //
         SyntaxKind::HorizontalRule, // * * * * *
         SyntaxKind::NEWLINE,        //
-        SyntaxKind::NEWLINE,        //
+        SyntaxKind::BlankLine,      //
         SyntaxKind::TEXT,           // below
         SyntaxKind::NEWLINE,        //
     ];
@@ -508,12 +508,38 @@ fn frontmatter_with_dots() {
         SyntaxKind::NEWLINE,          //
         SyntaxKind::FrontmatterDelim, // ...
         SyntaxKind::NEWLINE,          //
-        SyntaxKind::NEWLINE,          //
+        SyntaxKind::BlankLine,        //
         SyntaxKind::TEXT,             // Content
         SyntaxKind::NEWLINE,          //
     ];
     assert_eq!(
         kinds, expected,
         "Lexer should recognize '...' as frontmatter delimiter"
+    );
+}
+
+#[test]
+fn not_horizontal_rule() {
+    let input = "Above\n\n---- ---- ---\n\nBelow\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    let expected = vec![
+        SyntaxKind::TEXT,       // Above
+        SyntaxKind::NEWLINE,    //
+        SyntaxKind::BlankLine,  //
+        SyntaxKind::TEXT,       // ---- ---- ---
+        SyntaxKind::WHITESPACE, //
+        SyntaxKind::TEXT,       // ----
+        SyntaxKind::WHITESPACE, //
+        SyntaxKind::TEXT,       // ---
+        SyntaxKind::NEWLINE,    //
+        SyntaxKind::BlankLine,  //
+        SyntaxKind::TEXT,       // Below
+        SyntaxKind::NEWLINE,    //
+    ];
+
+    assert_eq!(
+        kinds, expected,
+        "Lexer should not misinterpret possible table header as horizontal rule"
     );
 }

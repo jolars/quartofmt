@@ -262,6 +262,20 @@ impl<'a> Lexer<'a> {
         true
     }
 
+    fn lookahead_until<F>(&self, predicate: F) -> Option<usize>
+    where
+        F: Fn(char) -> bool,
+    {
+        let mut offset = self.pos;
+        while let Some(ch) = self.input[offset..].chars().next() {
+            if predicate(ch) {
+                return Some(offset - self.pos);
+            }
+            offset += ch.len_utf8();
+        }
+        None // EOF reached without match
+    }
+
     pub fn advance_while<F>(&mut self, mut predicate: F) -> usize
     where
         F: FnMut(char) -> bool,
@@ -324,13 +338,33 @@ impl<'a> Lexer<'a> {
                     });
                 }
 
-                '-' | '*'
                 // TODO: consider not enforcing surrounded_by_blanklines for HR
+                '-' | '*'
                     if surrounded_by_blanklines
                         && (self.starts_with("---")
                             || self.starts_with("***")
                             || self.starts_with("- - -")
-                            || self.starts_with("* * *")) =>
+                            || self.starts_with("* * *"))
+                        && {
+                            // Reject mixed separation
+                            let line = {
+                                let pos = self.pos;
+                                let line_end = self.input[pos..]
+                                    .find('\n')
+                                    .map(|i| pos + i)
+                                    .unwrap_or(self.input.len());
+                                &self.input[pos..line_end]
+                            };
+                            let trimmed = line.trim();
+                            // Accept if all contiguous
+                            if trimmed.chars().all(|c| c == '-' || c == '*') {
+                                true
+                            } else {
+                                trimmed
+                                    .split(' ')
+                                    .all(|s| s == "-" || s == "*" || s.is_empty())
+                            }
+                        } =>
                 {
                     let len = self.advance_while(|c| c == '-' || c == ' ' || c == '*');
                     return Some(Token {
@@ -416,12 +450,24 @@ impl<'a> Lexer<'a> {
         }
 
         match ch {
+            // Detect newlines and blanklines
             '\n' => {
-                self.advance();
-                Some(Token {
-                    kind: SyntaxKind::NEWLINE,
-                    len: 1,
-                })
+                let start = self.pos;
+                self.advance(); // consume '\n'
+                // Check if the previous line (from last newline or BOF to start) is blank
+                let line_start = self.input[..start].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                let line = &self.input[line_start..start];
+                if line.trim().is_empty() {
+                    Some(Token {
+                        kind: SyntaxKind::BlankLine,
+                        len: 1,
+                    })
+                } else {
+                    Some(Token {
+                        kind: SyntaxKind::NEWLINE,
+                        len: 1,
+                    })
+                }
             }
 
             ' ' | '\t' | '\r' => {

@@ -102,7 +102,7 @@ impl Formatter {
         for el in node.children_with_tokens() {
             match el {
                 NodeOrToken::Token(t) => match t.kind() {
-                    SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {
+                    SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE | SyntaxKind::BlankLine => {
                         b.pending_space = true;
                     }
                     _ => {
@@ -167,7 +167,9 @@ impl Formatter {
                     match el {
                         rowan::NodeOrToken::Node(n) => self.format_node(&n, indent),
                         rowan::NodeOrToken::Token(t) => match t.kind() {
-                            SyntaxKind::WHITESPACE | SyntaxKind::NEWLINE => {}
+                            SyntaxKind::WHITESPACE
+                            | SyntaxKind::NEWLINE
+                            | SyntaxKind::BlankLine => {}
                             SyntaxKind::ImageLinkStart
                             | SyntaxKind::LinkStart
                             | SyntaxKind::LatexCommand => {
@@ -436,12 +438,15 @@ impl Formatter {
                         SyntaxKind::DivFenceOpen => {
                             fence_open = Some(child.text().to_string());
                         }
+
                         SyntaxKind::DivContent => {
                             div_content = Some(child);
                         }
+
                         SyntaxKind::DivFenceClose => {
                             fence_close = Some(child.text().to_string());
                         }
+
                         _ => {}
                     }
                 }

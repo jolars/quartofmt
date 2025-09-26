@@ -72,7 +72,7 @@ impl<'a> Parser<'a> {
     }
 
     fn at_eol(&self) -> bool {
-        self.at(SyntaxKind::NEWLINE)
+        self.at(SyntaxKind::NEWLINE) || self.at(SyntaxKind::BlankLine)
     }
 
     fn at_eol_or_eof(&self) -> bool {
@@ -88,10 +88,12 @@ impl<'a> Parser<'a> {
         while i > 0 && self.tokens[i - 1].kind == SyntaxKind::WHITESPACE {
             i -= 1;
         }
+
         if i == 0 {
             true
         } else {
             self.tokens[i - 1].kind == SyntaxKind::NEWLINE
+                || self.tokens[i - 1].kind == SyntaxKind::BlankLine
         }
     }
 
@@ -167,7 +169,7 @@ impl<'a> Parser<'a> {
                 Some(SyntaxKind::LatexEnvBegin) => self.parse_latex_environment(),
                 Some(SyntaxKind::BlockQuoteMarker) => self.parse_block_quote(),
                 Some(SyntaxKind::ListMarker) => self.parse_list(0),
-                Some(SyntaxKind::NEWLINE) if self.is_blank_line() => self.parse_blank_line(),
+                Some(SyntaxKind::BlankLine) => self.parse_blank_line(),
                 Some(SyntaxKind::WHITESPACE) => {
                     // Skip standalone whitespace
                     self.advance();
@@ -202,7 +204,7 @@ impl<'a> Parser<'a> {
             self.advance();
         }
 
-        if self.at(SyntaxKind::NEWLINE) {
+        if self.at_eol() {
             self.advance();
         }
 
@@ -261,15 +263,16 @@ impl<'a> Parser<'a> {
         // Code info (language, options)
         if self.at(SyntaxKind::TEXT) || self.at(SyntaxKind::WHITESPACE) {
             self.builder.start_node(SyntaxKind::CodeInfo.into());
-            while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+            while !self.at_eof() && !self.at_eol() {
                 self.advance();
             }
             self.builder.finish_node();
         }
 
-        if self.at(SyntaxKind::NEWLINE) {
+        if self.at_eol() {
             self.advance();
         }
+
         self.builder.finish_node();
 
         // Code content
@@ -334,12 +337,12 @@ impl<'a> Parser<'a> {
         self.advance(); // consume opening DivMarker               
 
         // Div info (class, attributes) - capture whitespace and text on same line
-        while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+        while !self.at_eof() && !self.at_eol() {
             log::debug!("Adding to DivFenceOpen: {:?}", self.current_token());
             self.advance();
         }
 
-        if self.at(SyntaxKind::NEWLINE) {
+        if self.at_eol() {
             log::debug!("Adding newline to DivFenceOpen: {:?}", self.current_token());
             self.advance();
         }
@@ -477,7 +480,7 @@ impl<'a> Parser<'a> {
         }
 
         // Trailing newline
-        if self.at(SyntaxKind::NEWLINE) {
+        if self.at_eol() {
             self.advance();
         }
 
@@ -691,7 +694,7 @@ impl<'a> Parser<'a> {
 
             let old_pos = self.pos;
             match self.current_token().map(|t| t.kind) {
-                Some(SyntaxKind::NEWLINE) if self.is_blank_line() => {
+                Some(SyntaxKind::BlankLine) => {
                     log::trace!("Breaking paragraph on blank line");
                     break;
                 }
@@ -781,7 +784,10 @@ impl<'a> Parser<'a> {
 
     fn parse_blank_line(&mut self) {
         self.builder.start_node(SyntaxKind::BlankLine.into());
-        while self.at(SyntaxKind::NEWLINE) || self.at(SyntaxKind::WHITESPACE) {
+        while self.at(SyntaxKind::NEWLINE)
+            || self.at(SyntaxKind::BlankLine)
+            || self.at(SyntaxKind::WHITESPACE)
+        {
             self.advance();
         }
         self.builder.finish_node();
@@ -797,6 +803,7 @@ impl<'a> Parser<'a> {
         // 1) header line (TEXT/WHITESPACE), 2) dashed line, 3) at least one body row
         {
             let mut pos = self.pos;
+
             // 1. First line: TEXT or WHITESPACE, then NEWLINE
             let mut saw_text = false;
             while pos < self.tokens.len() {
@@ -813,14 +820,18 @@ impl<'a> Parser<'a> {
                         }
                         pos += 1;
                     }
+
                     SyntaxKind::WHITESPACE => pos += 1,
+
                     SyntaxKind::NEWLINE => {
                         pos += 1;
                         break;
                     }
+
                     _ => break,
                 }
             }
+
             if saw_text {
                 // 2. Second line: dashes (one or more TEXT tokens containing only '-' and spaces), then NEWLINE
                 let mut saw_dash = false;
@@ -832,6 +843,7 @@ impl<'a> Parser<'a> {
                             let text = &self.input[start..end];
                             log::debug!("SimpleTable candidate line {pos}: {text}");
                             let trimmed = text.trim();
+
                             if !trimmed.is_empty()
                                 && trimmed.contains('-')
                                 && trimmed.chars().all(|c| c == '-' || c == ' ')
@@ -844,16 +856,20 @@ impl<'a> Parser<'a> {
                                 break;
                             }
                         }
+
                         SyntaxKind::WHITESPACE => {
                             pos += 1;
                         }
+
                         SyntaxKind::NEWLINE => {
                             pos += 1;
                             break;
                         }
+
                         _ => break,
                     }
                 }
+
                 if saw_dash {
                     // 3. Third line: TEXT or WHITESPACE (at least one row), then NEWLINE
                     let mut saw_row = false;
@@ -863,12 +879,15 @@ impl<'a> Parser<'a> {
                                 saw_row = true;
                                 pos += 1;
                             }
+
                             SyntaxKind::NEWLINE => {
                                 break;
                             }
+
                             _ => break,
                         }
                     }
+
                     if saw_row {
                         return true;
                     }
@@ -897,13 +916,16 @@ impl<'a> Parser<'a> {
                             break;
                         }
                     }
+
                     SyntaxKind::WHITESPACE => {
                         pos += 1;
                     }
+
                     SyntaxKind::NEWLINE => {
                         pos += 1;
                         break;
                     }
+
                     _ => break,
                 }
             }
@@ -919,9 +941,11 @@ impl<'a> Parser<'a> {
                             saw_row = true;
                             pos += 1;
                         }
+
                         SyntaxKind::NEWLINE => {
                             break;
                         }
+
                         _ => break,
                     }
                 }
@@ -932,7 +956,10 @@ impl<'a> Parser<'a> {
                     log::debug!("Headerless SimpleTable body row found");
 
                     // 3. Require a closing dashed line
-                    if pos < self.tokens.len() && self.tokens[pos].kind == SyntaxKind::NEWLINE {
+                    if pos < self.tokens.len()
+                        && (self.tokens[pos].kind == SyntaxKind::BlankLine
+                            || self.tokens[pos].kind == SyntaxKind::NEWLINE)
+                    {
                         pos += 1;
                     }
 
@@ -958,10 +985,12 @@ impl<'a> Parser<'a> {
                             SyntaxKind::WHITESPACE => {
                                 pos += 1;
                             }
+
                             SyntaxKind::NEWLINE => {
                                 // end of closing dashed line
                                 break;
                             }
+
                             _ => {
                                 log::debug!(
                                     "Headerless SimpleTable: unexpected token after body row: {:?}",
@@ -973,7 +1002,7 @@ impl<'a> Parser<'a> {
                     }
 
                     log::debug!(
-                        "Headerless SimpleTable closing dashed line found: saw_closing_dash={saw_closing_dash}"
+                        "Headerless SimpleTable closing dashed line found: {saw_closing_dash}"
                     );
 
                     if saw_closing_dash {
@@ -1001,10 +1030,12 @@ impl<'a> Parser<'a> {
                         saw_content = true;
                         temp_pos += 1;
                     }
+
                     SyntaxKind::NEWLINE => {
                         temp_pos += 1;
                         break;
                     }
+
                     _ => break,
                 }
             }
@@ -1020,7 +1051,7 @@ impl<'a> Parser<'a> {
                 self.advance();
             }
             // Explicitly consume the trailing NEWLINE for each line, if present
-            if self.at(SyntaxKind::NEWLINE) {
+            if self.at_eol() {
                 self.advance();
             }
             // _line_count += 1;

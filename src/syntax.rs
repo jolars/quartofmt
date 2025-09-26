@@ -16,6 +16,7 @@ pub enum SyntaxKind {
     CommentEnd,       // -->
     Attribute,        // {#label} for headings, math, etc.
     HorizontalRule,   // --- or *** or ___
+    BlankLine,
 
     // Links
     LinkStart, // [
@@ -45,7 +46,6 @@ pub enum SyntaxKind {
     FRONTMATTER,
     FencedDiv,
     PARAGRAPH,
-    BlankLine,
     BlockQuote,
     List,
     ListItem,
