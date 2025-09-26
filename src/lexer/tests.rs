@@ -14,7 +14,7 @@ fn token_texts(input: &str) -> Vec<(SyntaxKind, String)> {
 }
 
 #[test]
-fn lexer_math_block_tokens() {
+fn math_block_tokens() {
     let input = "$$\nf(x)=x^2\n$$ {#eq:foobar}\n";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -36,7 +36,7 @@ fn lexer_math_block_tokens() {
 }
 
 #[test]
-fn lexer_inline_math_tokens() {
+fn inline_math_tokens() {
     let input = "This is $x^2$ inline math.";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -61,7 +61,7 @@ fn lexer_inline_math_tokens() {
 }
 
 #[test]
-fn lexer_comment_end_bug() {
+fn comment_end_bug() {
     let input = "-->";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -74,7 +74,7 @@ fn lexer_comment_end_bug() {
 }
 
 #[test]
-fn lexer_triple_dollar_block_math() {
+fn triple_dollar_block_math() {
     let input = "$$$\nf(x)=x^2\n$$$\n";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -95,7 +95,7 @@ fn lexer_triple_dollar_block_math() {
 }
 
 #[test]
-fn lexer_escaped_dollar_is_text() {
+fn escaped_dollar_is_text() {
     let input = r#"foo \$ bar $baz$"#;
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -110,7 +110,7 @@ fn lexer_escaped_dollar_is_text() {
 }
 
 #[test]
-fn lexer_code_span_exact_token_sequence() {
+fn code_span_exact_token_sequence() {
     let input = "foo `bar $baz$` qux";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -128,7 +128,7 @@ fn lexer_code_span_exact_token_sequence() {
 }
 
 #[test]
-fn lexer_multiline_code_span_tokenizes_as_single_code_span() {
+fn multiline_code_span_tokenizes_as_single_code_span() {
     let input = "foo `bar\nbaz $qux$` quux";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -146,7 +146,7 @@ fn lexer_multiline_code_span_tokenizes_as_single_code_span() {
 }
 
 #[test]
-fn lexer_list_marker_bol_only() {
+fn list_marker_bol_only() {
     let input = "foo - bar\n- item\n";
     let tokens = crate::lexer::tokenize(input);
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -203,7 +203,7 @@ fn nested_list_tokens() {
 }
 
 #[test]
-fn lexer_atx_heading_tokens_basic() {
+fn atx_heading_tokens_basic() {
     let input = "## A level-two heading\n";
     let toks = token_texts(input);
 
@@ -221,7 +221,7 @@ fn lexer_atx_heading_tokens_basic() {
 }
 
 #[test]
-fn lexer_atx_heading_with_trailing_hashes() {
+fn atx_heading_with_trailing_hashes() {
     let input = "### A level-three heading ###\n";
     let toks = token_texts(input);
 
@@ -234,7 +234,7 @@ fn lexer_atx_heading_with_trailing_hashes() {
 }
 
 #[test]
-fn lexer_setext_heading_dashes_not_frontmatter() {
+fn setext_heading_dashes_not_frontmatter() {
     let input = "A level-two heading\n-------------------\n";
     let toks = token_texts(input);
 
@@ -256,7 +256,7 @@ fn lexer_setext_heading_dashes_not_frontmatter() {
 }
 
 #[test]
-fn lexer_setext_heading_equals() {
+fn setext_heading_equals() {
     let input = "A level-one heading\n====================\n";
     let toks = token_texts(input);
 
@@ -272,7 +272,7 @@ fn lexer_setext_heading_equals() {
 }
 
 #[test]
-fn lexer_does_not_treat_hash_number_as_heading() {
+fn does_not_treat_hash_number_as_heading() {
     let input = "I like several of their flavors of ice cream:\n#22, for example, and #5.\n";
     let tokens = tokenize(input);
     // Find the token for "#22"
@@ -326,7 +326,7 @@ fn handle_actual_dollar() {
 }
 
 #[test]
-fn lexer_blockquote_marker_only_at_bol_and_max_three_spaces() {
+fn blockquote_marker_only_at_bol_and_max_three_spaces() {
     let input = "    > Not a block quote (too much indent)\n\n > Valid block quote (one space)\n\n>Valid block quote\n\nfoo > not a block quote\n";
     let tokens = crate::lexer::tokenize(input);
 
@@ -347,7 +347,7 @@ fn lexer_blockquote_marker_only_at_bol_and_max_three_spaces() {
 }
 
 #[test]
-fn lexer_blockquote_requires_blank_line_unless_bof() {
+fn blockquote_requires_blank_line_unless_bof() {
     let input = "Intro line\n> Not a block quote (no blank line before)\n\n> Valid block quote (after blank)\n";
     let tokens = crate::lexer::tokenize(input);
     let count = tokens
@@ -373,7 +373,7 @@ fn lexer_blockquote_requires_blank_line_unless_bof() {
 }
 
 #[test]
-fn lexer_blockquote_more_than_three_spaces_is_not_marker_even_after_blank() {
+fn blockquote_more_than_three_spaces_is_not_marker_even_after_blank() {
     let input = "\n    > Too much indent\n";
     let tokens = crate::lexer::tokenize(input);
     let count = tokens
@@ -387,7 +387,7 @@ fn lexer_blockquote_more_than_three_spaces_is_not_marker_even_after_blank() {
 }
 
 #[test]
-fn lexer_nested_blockquote_after_blank_line_has_two_markers_on_line() {
+fn nested_blockquote_after_blank_line_has_two_markers_on_line() {
     // After a quoted blank line, a nested quote line with '> >' should emit two markers.
     let input = "> Text\n>\n> > Nested\n";
     let tokens = crate::lexer::tokenize(input);
