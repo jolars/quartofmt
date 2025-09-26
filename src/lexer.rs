@@ -295,11 +295,12 @@ impl<'a> Lexer<'a> {
                     });
                 }
 
-                '-' if self.surrounded_by_blanklines()
-                    && (self.starts_with("---")
-                        || self.starts_with("***")
-                        || self.starts_with("- - -")
-                        || self.starts_with("* * *")) =>
+                '-' | '*'
+                    if self.surrounded_by_blanklines()
+                        && (self.starts_with("---")
+                            || self.starts_with("***")
+                            || self.starts_with("- - -")
+                            || self.starts_with("* * *")) =>
                 {
                     let len = self.advance_while(|c| c == '-' || c == ' ' || c == '*');
                     if len >= 3 {
