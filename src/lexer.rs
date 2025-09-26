@@ -305,17 +305,6 @@ impl<'a> Lexer<'a> {
         if let Some(_indent) = indent {
             // At BOL with up to 3 spaces/tabs of indent
             match ch {
-                // Code fence (``` or ~~~)
-                '`' | '~' if self.starts_with("```") || self.starts_with("~~~") => {
-                    let tick_count = self.advance_while(|c| c == '`' || c == '~');
-                    if tick_count >= 3 {
-                        return Some(Token {
-                            kind: SyntaxKind::CodeFenceMarker,
-                            len: tick_count,
-                        });
-                    }
-                }
-
                 ':' if self.starts_with(":::") => {
                     let len = self.advance_while(|c| c == ':');
                     return Some(Token {
@@ -535,6 +524,23 @@ impl<'a> Lexer<'a> {
                     kind: SyntaxKind::TEXT,
                     len: 1,
                 })
+            }
+
+            // Code fence (``` or ~~~)
+            '`' | '~' if self.starts_with("```") || self.starts_with("~~~") => {
+                let tick_count = self.advance_while(|c| c == '`' || c == '~');
+                if tick_count >= 3 {
+                    Some(Token {
+                        kind: SyntaxKind::CodeFenceMarker,
+                        len: tick_count,
+                    })
+                } else {
+                    // Less than 3 backticks/ tildes: treat as text
+                    Some(Token {
+                        kind: SyntaxKind::TEXT,
+                        len: tick_count,
+                    })
+                }
             }
 
             // Inline code span: consume until matching number of backticks
