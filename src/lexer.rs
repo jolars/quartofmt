@@ -262,20 +262,6 @@ impl<'a> Lexer<'a> {
         true
     }
 
-    fn lookahead_until<F>(&self, predicate: F) -> Option<usize>
-    where
-        F: Fn(char) -> bool,
-    {
-        let mut offset = self.pos;
-        while let Some(ch) = self.input[offset..].chars().next() {
-            if predicate(ch) {
-                return Some(offset - self.pos);
-            }
-            offset += ch.len_utf8();
-        }
-        None // EOF reached without match
-    }
-
     pub fn advance_while<F>(&mut self, mut predicate: F) -> usize
     where
         F: FnMut(char) -> bool,
