@@ -296,6 +296,7 @@ impl<'a> Lexer<'a> {
                 }
 
                 '-' | '*'
+                // TODO: consider not enforcing surrounded_by_blanklines for HR
                     if self.surrounded_by_blanklines()
                         && (self.starts_with("---")
                             || self.starts_with("***")
