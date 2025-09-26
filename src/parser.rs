@@ -105,11 +105,6 @@ impl<'a> Parser<'a> {
             self.debug_tokens();
         }
 
-        // Check for frontmatter at the beginning
-        if self.at(SyntaxKind::FrontmatterDelim) {
-            self.parse_frontmatter();
-        }
-
         // Parse the rest of the top-level blocks until EOF
         self.parse_blocks(|_| false);
 
@@ -160,6 +155,7 @@ impl<'a> Parser<'a> {
             }
 
             match self.current_token().map(|t| t.kind) {
+                Some(SyntaxKind::FrontmatterDelim) => self.parse_frontmatter(),
                 Some(SyntaxKind::CodeFenceMarker) => self.parse_code_block(),
                 Some(SyntaxKind::DivMarker) => self.parse_fenced_div(),
                 Some(SyntaxKind::BlockMathMarker) => self.parse_block_math(),

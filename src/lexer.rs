@@ -32,6 +32,26 @@ impl<'a> Lexer<'a> {
         self.current_char() == Some('\n') || self.pos >= self.input.len()
     }
 
+    pub fn content_until_eol_is(&self, content: &str) -> bool {
+        let pos = self.pos;
+        let line_end = self.input[pos..]
+            .find('\n')
+            .map(|i| pos + i)
+            .unwrap_or(self.input.len());
+        let line_content = &self.input[pos..line_end];
+        line_content.trim() == content
+    }
+
+    pub fn line_ends_with(&self, suffix: &str) -> bool {
+        let pos = self.pos;
+        let line_end = self.input[pos..]
+            .find('\n')
+            .map(|i| pos + i)
+            .unwrap_or(self.input.len());
+        let line_content = &self.input[pos..line_end];
+        line_content.trim_end().ends_with(suffix)
+    }
+
     pub fn has_blankline_before(&self) -> bool {
         if self.pos == 0 {
             return true; // BOF counts as blank line before
@@ -313,17 +333,29 @@ impl<'a> Lexer<'a> {
                             || self.starts_with("* * *")) =>
                 {
                     let len = self.advance_while(|c| c == '-' || c == ' ' || c == '*');
-                    if len >= 3 {
+                    return Some(Token {
+                        kind: SyntaxKind::HorizontalRule,
+                        len,
+                    });
+                }
+
+                '-' if (self.line_ends_with("---")) => {
+                    let len = self.advance_while(|c| c == '-');
+                    if len == 3 {
                         return Some(Token {
-                            kind: SyntaxKind::HorizontalRule,
+                            kind: SyntaxKind::FrontmatterDelim,
+                            len,
+                        });
+                    } else {
+                        return Some(Token {
+                            kind: SyntaxKind::TEXT,
                             len,
                         });
                     }
                 }
 
-                '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {
-                    let ch = self.current_char().unwrap();
-                    let len = self.advance_while(|c| c == ch);
+                '.' if self.line_ends_with("...") => {
+                    let len = self.advance_while(|c| c == '.');
                     if len == 3 {
                         return Some(Token {
                             kind: SyntaxKind::FrontmatterDelim,

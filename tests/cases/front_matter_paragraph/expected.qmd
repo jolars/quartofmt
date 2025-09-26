@@ -1,5 +1,9 @@
 ---
-title: hi
+title: a very long title that spans multiple lines and should be treated as a single line in the front matter
 ---
+Hello world
 
+---
+author: a very long title that spans multiple lines and should be treated as a single line in the front matter
+...
 Hello world

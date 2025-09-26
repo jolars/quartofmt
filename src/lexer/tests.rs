@@ -493,3 +493,27 @@ fn horizontal_rule_spaced() {
         "Lexer should tokenize horizontal rules with spaces correctly"
     );
 }
+
+#[test]
+fn frontmatter_with_dots() {
+    let input = "---\ntitle: Test\n...\n\nContent\n";
+    let tokens = crate::lexer::tokenize(input);
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+    let expected = vec![
+        SyntaxKind::FrontmatterDelim, // ---
+        SyntaxKind::NEWLINE,          //
+        SyntaxKind::TEXT,             // title
+        SyntaxKind::WHITESPACE,       //
+        SyntaxKind::TEXT,             // Test
+        SyntaxKind::NEWLINE,          //
+        SyntaxKind::FrontmatterDelim, // ...
+        SyntaxKind::NEWLINE,          //
+        SyntaxKind::NEWLINE,          //
+        SyntaxKind::TEXT,             // Content
+        SyntaxKind::NEWLINE,          //
+    ];
+    assert_eq!(
+        kinds, expected,
+        "Lexer should recognize '...' as frontmatter delimiter"
+    );
+}
