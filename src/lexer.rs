@@ -24,6 +24,10 @@ impl<'a> Lexer<'a> {
         self.input[self.pos..].chars().nth(offset)
     }
 
+    pub fn at_bof(&self) -> bool {
+        self.pos == 0
+    }
+
     pub fn at_eol(&self) -> bool {
         self.current_char() == Some('\n') || self.pos >= self.input.len()
     }
@@ -97,7 +101,8 @@ impl<'a> Lexer<'a> {
                 _ => return None, // Non-whitespace before marker: not BOL
             }
         }
-        if indent <= 3 { Some(indent) } else { None }
+
+        Some(indent)
     }
 
     pub fn advance(&mut self) -> Option<char> {
@@ -273,6 +278,10 @@ impl<'a> Lexer<'a> {
 
         let indent = self.at_bol_with_indent();
 
+        let blankline_before = self.has_blankline_before();
+        let blankline_after = self.has_blankline_after();
+        let surrounded_by_blanklines = blankline_before && blankline_after;
+
         if let Some(_indent) = indent {
             // At BOL with up to 3 spaces/tabs of indent
             match ch {
@@ -297,7 +306,7 @@ impl<'a> Lexer<'a> {
 
                 '-' | '*'
                 // TODO: consider not enforcing surrounded_by_blanklines for HR
-                    if self.surrounded_by_blanklines()
+                    if surrounded_by_blanklines
                         && (self.starts_with("---")
                             || self.starts_with("***")
                             || self.starts_with("- - -")
@@ -313,12 +322,9 @@ impl<'a> Lexer<'a> {
                 }
 
                 '-' | '+' if (self.starts_with("---") || self.starts_with("+++")) => {
-                    let start_pos = self.pos;
                     let ch = self.current_char().unwrap();
                     let len = self.advance_while(|c| c == ch);
-                    let is_start_of_file = start_pos == 0;
-                    let is_after_newline = start_pos > 0 && self.input[..start_pos].ends_with('\n');
-                    if (is_start_of_file || is_after_newline) && len == 3 {
+                    if len == 3 {
                         return Some(Token {
                             kind: SyntaxKind::FrontmatterDelim,
                             len,

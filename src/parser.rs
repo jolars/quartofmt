@@ -71,6 +71,14 @@ impl<'a> Parser<'a> {
         self.pos >= self.tokens.len()
     }
 
+    fn at_eol(&self) -> bool {
+        self.at(SyntaxKind::NEWLINE)
+    }
+
+    fn at_eol_or_eof(&self) -> bool {
+        self.at_eol() || self.at_eof()
+    }
+
     fn at_bol(&self) -> bool {
         if self.pos == 0 {
             return true;
@@ -191,33 +199,24 @@ impl<'a> Parser<'a> {
 
         log::debug!("Starting frontmatter parse at pos {}", self.pos);
 
-        // Opening delimiter
-        if self.at(SyntaxKind::FrontmatterDelim) {
-            log::debug!("Found opening delimiter");
-            self.advance(); // ---/+++
-        } else {
-            panic!("Expected frontmatter delimiter at start of parse_frontmatter");
-        }
+        self.advance(); // ---/+++
 
         // Skip to end of line after opening delimiter
-        while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+        while !self.at_eol_or_eof() {
             self.advance();
         }
+
         if self.at(SyntaxKind::NEWLINE) {
             self.advance();
         }
 
         // Content until closing delimiter
-        let mut content_iterations = 0;
         while !self.at_eof() && !self.at(SyntaxKind::FrontmatterDelim) {
-            content_iterations += 1;
-            if content_iterations > 100 {
-                panic!(
-                    "Too many iterations in frontmatter content! Current token: {:?}",
-                    self.current_token()
-                );
-            }
             self.advance();
+        }
+
+        if self.at_eof() {
+            panic!("Could not find closing frontmatter delimiter");
         }
 
         // Closing delimiter
@@ -225,9 +224,10 @@ impl<'a> Parser<'a> {
             log::debug!("Found closing delimiter");
             self.advance();
             // Skip to end of line after closing delimiter
-            while !self.at_eof() && !self.at(SyntaxKind::NEWLINE) {
+            while !self.at_eol_or_eof() {
                 self.advance();
             }
+
             if self.at(SyntaxKind::NEWLINE) {
                 self.advance();
             }
