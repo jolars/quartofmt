@@ -70,6 +70,8 @@ printf "# Test\n\nThis is a very long line that should be wrapped." | ./target/r
 
 ## Project Architecture and Layout
 
+**IMPORTANT**: The overall structure will undergo changes to move from the current lexer → parser approach to a **block parser → inline parser structure**. The block parser will capture block structures (including nested ones), and the inline parser/lexer will then handle inline syntax markup.
+
 ### Source Structure
 ```
 src/
@@ -77,8 +79,8 @@ src/
 ├── lib.rs            # Public API with format() function
 ├── config.rs         # Configuration handling (.quartofmt.toml, XDG paths)
 ├── formatter.rs      # Main formatting logic and AST traversal  
-├── lexer.rs          # Token lexing for Markdown/Quarto syntax
-├── parser.rs         # Parser building CST from tokens using rowan
+├── lexer.rs          # Token lexing for Markdown/Quarto syntax (will change)
+├── parser.rs         # Parser building CST from tokens using rowan (will change)
 ├── syntax.rs         # Syntax node definitions and AST types
 └── lexer/            # Additional lexer modules
     └── parser/       # Additional parser modules
@@ -169,10 +171,14 @@ The project uses snapshot testing via `tests/golden_cases.rs`:
 - Property: formatting is idempotent
 
 ### Formatting Rules
-- Default 80 character line width
+- Default 80 character line width (configurable)
+- **Most formatting behavior will be configurable through .quartofmt.toml**
 - Preserves frontmatter and code blocks
 - Converts setext headings to ATX format
 - Handles Quarto-specific syntax (fenced divs, math blocks)
+- **Tables will be auto-formatted for consistency**
+- **Lists will be formatted to avoid lazy list style**
+- **Block quotes will be properly formatted**
 - Wraps paragraphs but preserves inline code/math whitespace
 
 ## Configuration Files and Settings
@@ -203,7 +209,8 @@ The `docs/playground/` contains a WASM-based web interface:
 - Ignore the 2 build warnings (they're acceptable dead code)
 
 ### Architecture Dependencies
-- Lexer produces tokens consumed by parser
+- **PLANNED CHANGE**: Architecture will move from current lexer → parser approach to block parser → inline parser structure
+- Block parser will capture block structures (including nested ones), then inline parser/lexer handles inline syntax
 - Parser builds rowan CST consumed by formatter  
 - Config system must maintain backward compatibility
 - WASM crate depends on main crate - changes affect both
