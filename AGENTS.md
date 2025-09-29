@@ -7,7 +7,12 @@ files written in Rust. It's designed to understand Quarto/Pandoc-specific
 syntax that other formatters like Prettier and mdformat struggle with,
 including fenced divs, tables, and math formatting.
 
-**Syntax Reference**: See [`docs/pandoc-spec.md`](docs/pandoc-spec.md) for comprehensive Pandoc syntax specification. This document is essential for understanding formatting requirements, implementing parser logic, and ensuring spec compliance.
+**Syntax Reference**: See [`docs/pandoc-spec.md`](docs/pandoc-spec.md) for
+comprehensive Pandoc syntax specification. This document is essential for
+understanding formatting requirements, implementing parser logic, and ensuring
+spec compliance. quartofmt aims to support the full suite of Pandoc syntax,
+including all extensions. It will also support all the Quarto-specific
+syntax extensions.
 
 **Key Facts:**
 
