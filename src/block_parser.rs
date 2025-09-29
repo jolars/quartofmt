@@ -197,4 +197,8 @@ fn strip_leading_spaces(line: &str) -> &str {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    mod blanklines;
+    mod headings;
+    mod helpers;
+}

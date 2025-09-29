@@ -1,25 +1,8 @@
-use crate::block_parser::BlockParser;
+use crate::block_parser::tests::helpers::{find_first, parse_blocks};
 use crate::syntax::{SyntaxKind, SyntaxNode};
-
-fn parse_blocks(input: &str) -> SyntaxNode {
-    BlockParser::new(input).parse()
-}
-
-fn find_first(node: &SyntaxNode, kind: SyntaxKind) -> Option<SyntaxNode> {
-    node.descendants().find(|n| n.kind() == kind)
-}
 
 fn get_heading_content(node: &SyntaxNode) -> Option<String> {
     find_first(node, SyntaxKind::HeadingContent).map(|n| n.text().to_string())
-}
-
-fn get_blocks(node: &SyntaxNode) -> Vec<SyntaxNode> {
-    let document = node
-        .children()
-        .find(|n| n.kind() == SyntaxKind::DOCUMENT)
-        .unwrap();
-    let blocks: Vec<SyntaxNode> = document.children().collect();
-    blocks
 }
 
 #[test]
@@ -84,14 +67,4 @@ fn parses_multiple_headings() {
         .filter(|n| n.kind() == SyntaxKind::HeadingContent);
     assert_eq!(headings.next().unwrap().text(), "First");
     assert_eq!(headings.next().unwrap().text(), "Second");
-}
-
-#[test]
-fn blankline_between_paragraphs() {
-    let node = parse_blocks("Paragraph 1\n\nParagraph 2\n");
-    let blocks = get_blocks(&node);
-
-    println!("{:#?}", blocks);
-
-    assert_eq!(blocks.len(), 3); // Paragraph, BlankLine, Paragraph
 }
