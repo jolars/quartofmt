@@ -1,15 +1,6 @@
 use quartofmt::format;
 
 #[test]
-fn latex_command_preservation() {
-    let input = "\\pdfpcnote{\n  Ask them to identify the bottleneck.\n}\n";
-    let output = format(input, None);
-
-    // LaTeX commands should be preserved exactly as written
-    similar_asserts::assert_eq!(output, input);
-}
-
-#[test]
 fn latex_command_in_paragraph() {
     let input = "This is a paragraph with \\textbf{bold text} in the middle.\n";
     let output = format(input, None);

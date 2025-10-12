@@ -1,14 +1,11 @@
 pub mod block_parser;
 pub mod config;
 pub mod formatter;
-pub mod lexer;
-pub mod parser;
 pub mod syntax;
 
 pub use config::Config;
 pub use config::ConfigBuilder;
 pub use formatter::format_tree;
-pub use parser::parse;
 
 fn init_logger() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -59,7 +56,8 @@ pub fn format(input: &str, config: Option<Config>) -> String {
     let line_ending = detect_line_ending(input);
 
     let normalized_input = input.replace("\r\n", "\n");
-    let tree = parse(&normalized_input);
+
+    let tree = block_parser::BlockParser::new(&normalized_input).parse();
     let config = config.unwrap_or_default();
     let out = format_tree(&tree, &config);
 

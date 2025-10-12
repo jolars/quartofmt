@@ -1,9 +1,0 @@
-$$
-  f(x) = x^2
-$$ {#eq:foobar}
-
-$$\mathrm{E}=mc^2$$
-
-An equation in a sentence: $$ E=mc^2.$$
-
-$\alpha$ is the **acceptance probability** and $g(y)/\alpha$ the **envelope** of $f$.

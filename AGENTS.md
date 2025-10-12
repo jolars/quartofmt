@@ -87,10 +87,14 @@ printf "# Test\n\nThis is a very long line that should be wrapped." | ./target/r
 
 ## Project Architecture and Layout
 
-**IMPORTANT**: The overall structure will undergo changes to move from the
-current lexer → parser approach to a **block parser → inline parser
-structure**. The block parser will capture block structures (including nested
-ones), and the inline parser/lexer will then handle inline syntax markup.
+The project is designed to first parse the document into a concrete syntax tree (CST)
+using a block parser, then run an inline parser/lexer to handle inline elements. The CST is
+represented using the `rowan` crate, which provides a red-green tree structure
+for efficient syntax tree manipulation. The formatter then traverses this tree to apply
+the formatting rules.
+
+**IMPORTANT**: Currently, there is only a WIP block parser. The inline parser/lexer
+is not yet implemented.
 
 ### Source Structure
 
@@ -100,13 +104,11 @@ src/
 ├── lib.rs            # Public API with format() function
 ├── config.rs         # Configuration handling (.quartofmt.toml, XDG paths)
 ├── formatter.rs      # Main formatting logic and AST traversal
-├── lexer.rs          # Token lexing for Markdown/Quarto syntax (will change)
-├── parser.rs         # Parser building CST from tokens using rowan (will change)
-├── block_parser.rs   # WIP block parser module (future)
-├── inline_parser.rs  # WIP inline parser module (future)
+├── block_parser.rs   # block parser module
+├── inline_parser.rs  # WIP inline parser module (not yet implemented)
 ├── syntax.rs         # Syntax node definitions and AST types
-└── parser/           # Additional parser modules
-└── lexer/            # Additional lexer modules
+├── inline_parser/    # Additional modules, including tests, for the inline parser
+└── block_parser/     # Additional modules, including tests, for the block parser
 ```
 
 ### Configuration System
@@ -238,6 +240,7 @@ The `docs/playground/` contains a WASM-based web interface:
 
 - Run full test suite after every change: `cargo test`
 - Ensure clippy passes: `cargo clippy -- -D warnings`
+- Ensure formatting passes: `cargo fmt -- --check`
 - Test CLI functionality after building release binary
 - Consider idempotency - formatting twice should equal formatting once
 - Update golden test expectations carefully with `UPDATE_EXPECTED=1 cargo test`
@@ -247,12 +250,10 @@ The `docs/playground/` contains a WASM-based web interface:
 - Assume task runner is available - use direct cargo commands
 - Break the hierarchical config system (explicit > local > XDG > default)
 - Change core formatting without extensive golden test verification
-- Ignore the 2 build warnings (they're acceptable dead code)
 
 ### Architecture Dependencies
 
-- **PLANNED CHANGE**: Architecture will move from current lexer → parser approach to block parser → inline parser structure
-- Block parser will capture block structures (including nested ones), then inline parser/lexer handles inline syntax
+- Block parser captures block structures (including nested ones), then inline parser/lexer handles inline syntax
 - Parser builds rowan CST consumed by formatter
 - Config system must maintain backward compatibility
 - WASM crate depends on main crate - changes affect both
