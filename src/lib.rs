@@ -1,6 +1,7 @@
 pub mod block_parser;
 pub mod config;
 pub mod formatter;
+pub mod inline_parser;
 pub mod syntax;
 
 pub use config::Config;
@@ -57,7 +58,13 @@ pub fn format(input: &str, config: Option<Config>) -> String {
 
     let normalized_input = input.replace("\r\n", "\n");
 
-    let tree = block_parser::BlockParser::new(&normalized_input).parse();
+    // Step 1: Parse blocks to create initial CST
+    let block_tree = block_parser::BlockParser::new(&normalized_input).parse();
+
+    // Step 2: Run inline parser on block content to create final CST
+    let tree = inline_parser::InlineParser::new(block_tree).parse();
+
+    // Step 3: Format the final CST
     let config = config.unwrap_or_default();
     let out = format_tree(&tree, &config);
 
