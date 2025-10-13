@@ -1,6 +1,4 @@
-mod code_cells;
 mod comments;
-mod divs;
 mod frontmatter;
 mod headings;
 mod links;
