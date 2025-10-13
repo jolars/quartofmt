@@ -42,7 +42,7 @@ rustup component add rustfmt clippy
 cargo check
 ```
 
-2. **Run tests** (comprehensive test suite with 75 tests):
+2. **Run tests**:
 
 ```bash
 cargo test
