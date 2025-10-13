@@ -8,11 +8,15 @@ syntax that other formatters like Prettier and mdformat struggle with,
 including fenced divs, tables, and math formatting.
 
 **Syntax Reference**: See [`docs/pandoc-spec.md`](docs/pandoc-spec.md) for
-comprehensive Pandoc syntax specification. This document is essential for
-understanding formatting requirements, implementing parser logic, and ensuring
-spec compliance. quartofmt aims to support the full suite of Pandoc syntax,
-including all extensions. It will also support all the Quarto-specific
-syntax extensions.
+comprehensive Pandoc syntax specification. This index document links to
+individual specification files organized by syntax element type (paragraphs,
+headings, lists, tables, etc.) in the [`docs/pandoc-spec/`](docs/pandoc-spec/)
+directory. These documents represent the definitive reference for elements
+that the parser should understand and handle correctly. This specification
+is essential for understanding formatting requirements, implementing parser
+logic, and ensuring spec compliance. quartofmt aims to support the full
+suite of Pandoc syntax, including all extensions. It will also support all
+the Quarto-specific syntax extensions.
 
 **Key Facts:**
 
