@@ -258,7 +258,10 @@ impl<'a> BlockParser<'a> {
         self.parse_document(); // <-- Add this line!
         self.builder.finish_node();
 
-        SyntaxNode::new_root(self.builder.finish())
+        let flat_tree = SyntaxNode::new_root(self.builder.finish());
+
+        // Second pass: resolve container blocks
+        resolve_containers(flat_tree)
     }
 
     fn parse_document(&mut self) {
@@ -295,6 +298,170 @@ impl<'a> BlockParser<'a> {
     }
 }
 
+fn resolve_containers(root: SyntaxNode) -> SyntaxNode {
+    use rowan::GreenNodeBuilder;
+
+    let mut builder = GreenNodeBuilder::new();
+
+    // Copy the root node type
+    builder.start_node(root.kind().into());
+
+    // Process the document children
+    if let Some(doc) = root.children().find(|n| n.kind() == SyntaxKind::DOCUMENT) {
+        builder.start_node(SyntaxKind::DOCUMENT.into());
+        resolve_container_children(&mut builder, &doc.children().collect::<Vec<_>>());
+        builder.finish_node();
+    }
+
+    builder.finish_node();
+    SyntaxNode::new_root(builder.finish())
+}
+
+fn resolve_container_children(builder: &mut GreenNodeBuilder<'static>, children: &[SyntaxNode]) {
+    let mut i = 0;
+
+    while i < children.len() {
+        if let Some(blockquote_end) = try_identify_blockquote(children, i) {
+            // Found blockquote pattern from i..blockquote_end
+            build_blockquote_node(builder, &children[i..blockquote_end]);
+            i = blockquote_end;
+        } else {
+            // Regular node, copy as-is
+            copy_node_recursively(builder, &children[i]);
+            i += 1;
+        }
+    }
+}
+
+fn try_identify_blockquote(children: &[SyntaxNode], start: usize) -> Option<usize> {
+    if start >= children.len() {
+        return None;
+    }
+
+    // Check if this paragraph looks like a blockquote (starts with >)
+    let first_node = &children[start];
+    if first_node.kind() != SyntaxKind::PARAGRAPH {
+        return None;
+    }
+
+    let text = first_node.text().to_string();
+    let first_line = text.lines().next().unwrap_or("");
+
+    // Check if line has valid blockquote indentation (max 3 spaces before >)
+    if !is_valid_blockquote_line(first_line) {
+        return None;
+    }
+
+    // Find consecutive blockquote paragraphs and blank lines
+    let mut end = start + 1;
+    while end < children.len() {
+        let node = &children[end];
+        match node.kind() {
+            SyntaxKind::PARAGRAPH => {
+                let text = node.text().to_string();
+                let first_line = text.lines().next().unwrap_or("");
+                if is_valid_blockquote_line(first_line) {
+                    end += 1;
+                } else {
+                    break;
+                }
+            }
+            SyntaxKind::BlankLine => {
+                // Blank lines can be part of blockquotes
+                end += 1;
+            }
+            _ => break,
+        }
+    }
+
+    Some(end)
+}
+
+fn is_valid_blockquote_line(line: &str) -> bool {
+    // Check for up to 3 spaces, then >, following Pandoc spec
+    if line.starts_with('>') {
+        return true;
+    }
+    if line.starts_with(' ') && line.len() > 1 && line[1..].starts_with('>') {
+        return true;
+    }
+    if line.starts_with("  ") && line.len() > 2 && line[2..].starts_with('>') {
+        return true;
+    }
+    if line.starts_with("   ") && line.len() > 3 && line[3..].starts_with('>') {
+        return true;
+    }
+    // 4 or more spaces before > is not a valid blockquote
+    false
+}
+
+fn build_blockquote_node(builder: &mut GreenNodeBuilder<'static>, nodes: &[SyntaxNode]) {
+    builder.start_node(SyntaxKind::BlockQuote.into());
+
+    // Extract content from blockquote markers and recursively parse
+    let mut content_lines = Vec::new();
+
+    for node in nodes {
+        match node.kind() {
+            SyntaxKind::PARAGRAPH => {
+                let text = node.text().to_string();
+                for line in text.lines() {
+                    let trimmed = line.trim_start();
+                    if let Some(stripped) = trimmed.strip_prefix('>') {
+                        // Remove '>' and optional space
+                        let content = if stripped.starts_with(' ') {
+                            &stripped[1..]
+                        } else {
+                            stripped
+                        };
+                        content_lines.push(content.to_string());
+                    }
+                }
+            }
+            SyntaxKind::BlankLine => {
+                content_lines.push(String::new());
+            }
+            _ => {}
+        }
+    }
+
+    if !content_lines.is_empty() {
+        let content = content_lines.join("\n");
+        if !content.trim().is_empty() {
+            // Create a sub-parser for the blockquote content - this enables recursion!
+            let sub_parser = BlockParser::new(&content);
+            let sub_tree = sub_parser.parse();
+
+            // Copy the sub-tree's document children into our blockquote
+            if let Some(doc) = sub_tree
+                .children()
+                .find(|n| n.kind() == SyntaxKind::DOCUMENT)
+            {
+                for child in doc.children() {
+                    copy_node_recursively(builder, &child);
+                }
+            }
+        }
+    }
+
+    builder.finish_node();
+}
+
+fn copy_node_recursively(builder: &mut GreenNodeBuilder<'static>, node: &SyntaxNode) {
+    builder.start_node(node.kind().into());
+
+    for child in node.children_with_tokens() {
+        match child {
+            rowan::NodeOrToken::Node(n) => copy_node_recursively(builder, &n),
+            rowan::NodeOrToken::Token(t) => {
+                builder.token(t.kind().into(), t.text());
+            }
+        }
+    }
+
+    builder.finish_node();
+}
+
 fn strip_leading_spaces(line: &str) -> &str {
     line.strip_prefix("   ")
         .or_else(|| line.strip_prefix("  "))
@@ -314,6 +481,7 @@ fn get_fence_count(line: &str, fence_char: char) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     mod blanklines;
+    mod blockquotes;
     mod code_blocks;
     mod headings;
     mod helpers;
