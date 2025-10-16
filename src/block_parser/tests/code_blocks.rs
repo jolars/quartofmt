@@ -7,10 +7,10 @@ fn get_code_content(node: &crate::syntax::SyntaxNode) -> Option<String> {
 
 fn get_code_info_token(node: &crate::syntax::SyntaxNode) -> Option<SyntaxToken> {
     for element in node.descendants_with_tokens() {
-        if let Some(token) = element.as_token() {
-            if token.kind() == SyntaxKind::CodeInfo {
-                return Some(token.clone());
-            }
+        if let Some(token) = element.as_token()
+            && token.kind() == SyntaxKind::CodeInfo
+        {
+            return Some(token.clone());
         }
     }
     None
