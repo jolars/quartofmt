@@ -292,3 +292,29 @@ fn spec_blockquote_max_three_space_indent() {
     assert_eq!(count_nodes_of_type(&tree2, SyntaxKind::BlockQuote), 0);
     assert_eq!(count_nodes_of_type(&tree2, SyntaxKind::PARAGRAPH), 1);
 }
+
+// Test lazy blockquote form
+#[test]
+fn spec_lazy_blockquote_form() {
+    let input = "> This is a block quote. This\nparagraph has two lines.";
+    let parser = BlockParser::new(input);
+    let tree = parser.parse();
+
+    // Should have 1 BlockQuote node containing the lazy continuation
+    assert_eq!(count_nodes_of_type(&tree, SyntaxKind::BlockQuote), 1);
+
+    // The blockquote should contain both lines as a single paragraph
+    let blockquotes = find_nodes_of_type(&tree, SyntaxKind::BlockQuote);
+    let blockquote = &blockquotes[0];
+    let text = blockquote.text().to_string();
+
+    // Should contain both the first line and the lazy continuation
+    assert!(
+        text.contains("This is a block quote"),
+        "Should contain first line"
+    );
+    assert!(
+        text.contains("paragraph has two lines"),
+        "Should contain lazy continuation"
+    );
+}

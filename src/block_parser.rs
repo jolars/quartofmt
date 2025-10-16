@@ -395,6 +395,28 @@ fn is_valid_blockquote_line(line: &str) -> bool {
     false
 }
 
+fn strip_blockquote_marker(line: &str) -> Option<&str> {
+    // Handle up to 3 spaces before >, then extract content after >
+    if let Some(stripped) = line.strip_prefix('>') {
+        // Remove optional space after >
+        stripped.strip_prefix(' ').or(Some(stripped))
+    } else if let Some(rest) = line.strip_prefix(' ')
+        && let Some(stripped) = rest.strip_prefix('>')
+    {
+        stripped.strip_prefix(' ').or(Some(stripped))
+    } else if let Some(rest) = line.strip_prefix("  ")
+        && let Some(stripped) = rest.strip_prefix('>')
+    {
+        stripped.strip_prefix(' ').or(Some(stripped))
+    } else if let Some(rest) = line.strip_prefix("   ")
+        && let Some(stripped) = rest.strip_prefix('>')
+    {
+        stripped.strip_prefix(' ').or(Some(stripped))
+    } else {
+        None
+    }
+}
+
 fn build_blockquote_node(builder: &mut GreenNodeBuilder<'static>, nodes: &[SyntaxNode]) {
     builder.start_node(SyntaxKind::BlockQuote.into());
 
@@ -406,15 +428,12 @@ fn build_blockquote_node(builder: &mut GreenNodeBuilder<'static>, nodes: &[Synta
             SyntaxKind::PARAGRAPH => {
                 let text = node.text().to_string();
                 for line in text.lines() {
-                    let trimmed = line.trim_start();
-                    if let Some(stripped) = trimmed.strip_prefix('>') {
-                        // Remove '>' and optional space
-                        let content = if stripped.starts_with(' ') {
-                            &stripped[1..]
-                        } else {
-                            stripped
-                        };
-                        content_lines.push(content.to_string());
+                    if let Some(stripped) = strip_blockquote_marker(line) {
+                        // Line has blockquote marker - extract content
+                        content_lines.push(stripped.to_string());
+                    } else {
+                        // Lazy line without marker - include as-is
+                        content_lines.push(line.to_string());
                     }
                 }
             }
