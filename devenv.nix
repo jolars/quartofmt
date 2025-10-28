@@ -13,8 +13,6 @@
 
   languages.rust = {
     enable = true;
-    # mold.enable = true;
-    # channel = "stable";
   };
 
   git-hooks = {
