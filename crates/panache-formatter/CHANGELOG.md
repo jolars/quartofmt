@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.24.0](https://github.com/jolars/panache/compare/panache-formatter-v0.23.0...panache-formatter-v0.24.0) (2026-09-06)
+
+### Features
+- **parser:** add consumer document API ([`23904a5`](https://github.com/jolars/panache/commit/23904a5b46d11029a096b72396165197c483867f))
+
+### Dependencies
+- updated crates/panache-parser to v0.29.0
+
 ## [0.23.0](https://github.com/jolars/panache/compare/panache-formatter-v0.22.0...panache-formatter-v0.23.0) (2026-08-31)
 
 ### Features

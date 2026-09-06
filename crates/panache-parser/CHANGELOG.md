@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.29.0](https://github.com/jolars/panache/compare/panache-parser-v0.28.1...panache-parser-v0.29.0) (2026-09-06)
+
+### Features
+- **parser:** add consumer document API ([`23904a5`](https://github.com/jolars/panache/commit/23904a5b46d11029a096b72396165197c483867f))
+
+### Bug Fixes
+- **parser:** handle YAML block scalar CRLF ([`9e7bf53`](https://github.com/jolars/panache/commit/9e7bf53d684bc84f1467fc78953414765af4cd68)), fixes [#527](https://github.com/jolars/panache/issues/527)
+
 ## [0.28.1](https://github.com/jolars/panache/compare/panache-parser-v0.28.0...panache-parser-v0.28.1) (2026-08-31)
 
 ### Bug Fixes
