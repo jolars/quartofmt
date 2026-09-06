@@ -89,7 +89,13 @@ DOCUMENT@0..472
       LINK_TEXT_END@343..344 "]"
       LINK_DEST_START@344..345 "("
       LINK_DEST@345..376
-        TEXT@345..376 "/url/\t\"title preceded ..."
+        LINK_DEST_URL@345..350
+          TEXT@345..350 "/url/"
+        TEXT@350..351 "\t"
+        LINK_DEST_TITLE@351..376
+          LINK_DEST_TITLE_MARKER@351..352 "\""
+          TEXT@352..375 "title preceded by a tab"
+          LINK_DEST_TITLE_MARKER@375..376 "\""
       LINK_DEST_END@376..377 ")"
     TEXT@377..378 "."
     NEWLINE@378..379 "\n"

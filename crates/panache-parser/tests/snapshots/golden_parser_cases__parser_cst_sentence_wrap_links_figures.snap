@@ -13,7 +13,8 @@ DOCUMENT@0..138
       LINK_TEXT_END@41..42 "]"
       LINK_DEST_START@42..43 "("
       LINK_DEST@43..62
-        TEXT@43..62 "https://example.com"
+        LINK_DEST_URL@43..62
+          TEXT@43..62 "https://example.com"
       LINK_DEST_END@62..63 ")"
     TEXT@63..85 " after. And a figure: "
     IMAGE_LINK@85..122
@@ -24,7 +25,8 @@ DOCUMENT@0..138
       IMAGE_ALT_END@110..111 "]"
       IMAGE_DEST_START@111..112 "("
       LINK_DEST@112..121
-        TEXT@112..121 "image.png"
+        LINK_DEST_URL@112..121
+          TEXT@112..121 "image.png"
       IMAGE_DEST_END@121..122 ")"
     TEXT@122..137 " then continue."
     NEWLINE@137..138 "\n"

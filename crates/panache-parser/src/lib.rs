@@ -17,6 +17,8 @@
 //! # Main entry points
 //!
 //! - [`parse`]: Parse input text into a [`SyntaxNode`].
+//! - [`parse_document`]: Parse into a typed [`syntax::Document`] while retaining
+//!   embedded-language errors.
 //! - [`to_pandoc_ast`]: Project a [`SyntaxNode`] into pandoc-native AST text.
 //! - [`ParserOptions`]: Parser configuration and extension toggles.
 //! - [`syntax`]: Typed syntax wrappers and syntax kinds.
@@ -44,7 +46,11 @@ pub use options::ParserOptions;
 pub use pandoc_ast::{
     to_pandoc_ast, to_pandoc_ast_with_options, to_pandoc_json, to_pandoc_json_with_options,
 };
-pub use parser::inlines::refdef_map::{RefdefMap, collect_refdef_labels};
+pub use parser::ParsedDocument;
+pub use parser::inlines::refdef_map::{
+    RefdefMap, collect_refdef_labels, normalize_label as normalize_reference_label,
+};
 pub use parser::parse;
+pub use parser::parse_document;
 pub use parser::parse_with_refdefs;
 pub use syntax::SyntaxNode;

@@ -13,7 +13,8 @@ DOCUMENT@0..542
       LINK_TEXT_END@33..34 "]"
       LINK_DEST_START@34..35 "("
       LINK_DEST@35..57
-        TEXT@35..57 "reuse.html#inline-code"
+        LINK_DEST_URL@35..57
+          TEXT@35..57 "reuse.html#inline-code"
       LINK_DEST_END@57..58 ")"
     TEXT@58..60 " ("
     INLINE_CODE@60..70

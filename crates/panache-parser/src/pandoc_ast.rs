@@ -21,8 +21,8 @@ use std::collections::{HashMap, HashSet};
 use crate::SyntaxNode;
 use crate::parser::utils::attributes::decode_html_attr_entities;
 use crate::syntax::{
-    SyntaxKind, SyntaxToken, code_span_payload, separator_column_segments, separator_marker_tokens,
-    text_without_line_prefixes,
+    AstNode, LinkDest, SyntaxKind, SyntaxToken, code_span_payload, separator_column_segments,
+    separator_marker_tokens, text_without_line_prefixes,
 };
 use rowan::NodeOrToken;
 use serde_json::{Value, json};
@@ -4369,37 +4369,11 @@ fn inline_footnote_inline(node: &SyntaxNode) -> Inline {
 }
 
 fn parse_link_dest(node: &SyntaxNode) -> (String, String) {
-    let raw = node.text().to_string();
-    let trimmed = raw.trim();
-    if let Some(rest) = trimmed.strip_prefix('<')
-        && let Some(end) = rest.find('>')
-    {
-        let url = &rest[..end];
-        let after = rest[end + 1..].trim();
-        let title = parse_dest_title(after);
-        return (escape_link_dest(url), title);
-    }
-    let bytes = trimmed.as_bytes();
-    let mut url_end = trimmed.len();
-    let mut i = 0;
-    while i < bytes.len() {
-        if matches!(bytes[i], b' ' | b'\t' | b'\n') {
-            let mut j = i;
-            while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n') {
-                j += 1;
-            }
-            if j < bytes.len() && matches!(bytes[j], b'"' | b'\'' | b'(') {
-                url_end = i;
-                break;
-            }
-            i = j;
-        } else {
-            i += 1;
-        }
-    }
-    let url_raw = &trimmed[..url_end];
-    let title = parse_dest_title(trimmed[url_end..].trim());
-    (escape_link_dest(url_raw), title)
+    let destination = LinkDest::cast(node.clone()).expect("checked link destination");
+    (
+        escape_link_dest(&destination.url_content()),
+        destination.title().unwrap_or_default(),
+    )
 }
 
 /// Mirrors pandoc's `escapeURI`: percent-escape ASCII whitespace and the

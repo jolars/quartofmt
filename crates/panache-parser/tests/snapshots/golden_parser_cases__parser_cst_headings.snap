@@ -65,7 +65,8 @@ DOCUMENT@0..529
         LINK_TEXT_END@134..135 "]"
         LINK_DEST_START@135..136 "("
         LINK_DEST@136..155
-          TEXT@136..155 "https://example.com"
+          LINK_DEST_URL@136..155
+            TEXT@136..155 "https://example.com"
         LINK_DEST_END@155..156 ")"
     NEWLINE@156..157 "\n"
   BLANK_LINE@157..158

@@ -95,7 +95,8 @@ DOCUMENT@0..4373
         LINK_TEXT_END@652..653 "]"
         LINK_DEST_START@653..654 "("
         LINK_DEST@654..689
-          TEXT@654..689 "/docs/manuscripts/ind ..."
+          LINK_DEST_URL@654..689
+            TEXT@654..689 "/docs/manuscripts/ind ..."
         LINK_DEST_END@689..690 ")"
       TEXT@690..691 "."
       NEWLINE@691..692 "\n"
@@ -172,7 +173,8 @@ DOCUMENT@0..4373
         LINK_TEXT_END@1025..1026 "]"
         LINK_DEST_START@1026..1027 "("
         LINK_DEST@1027..1092
-          TEXT@1027..1092 "https://marketplace.v ..."
+          LINK_DEST_URL@1027..1092
+            TEXT@1027..1092 "https://marketplace.v ..."
         LINK_DEST_END@1092..1093 ")"
       TEXT@1093..1101 " or the "
       LINK@1101..1166
@@ -183,7 +185,8 @@ DOCUMENT@0..4373
         LINK_TEXT_END@1119..1120 "]"
         LINK_DEST_START@1120..1121 "("
         LINK_DEST@1121..1165
-          TEXT@1121..1165 "https://open-vsx.org/ ..."
+          LINK_DEST_URL@1121..1165
+            TEXT@1121..1165 "https://open-vsx.org/ ..."
         LINK_DEST_END@1165..1166 ")"
       TEXT@1166..1167 "."
       NEWLINE@1167..1168 "\n"
@@ -279,7 +282,8 @@ DOCUMENT@0..4373
       LINK_TEXT_END@1722..1723 "]"
       LINK_DEST_START@1723..1724 "("
       LINK_DEST@1724..1755
-        TEXT@1724..1755 "{{< meta tool.templat ..."
+        LINK_DEST_URL@1724..1755
+          TEXT@1724..1755 "{{< meta tool.templat ..."
       LINK_DEST_END@1755..1756 ")"
     TEXT@1756..1788 ", including all of it ..."
     NEWLINE@1788..1789 "\n"
@@ -299,7 +303,8 @@ DOCUMENT@0..4373
           LINK_TEXT_END@1854..1855 "]"
           LINK_DEST_START@1855..1856 "("
           LINK_DEST@1856..1896
-            TEXT@1856..1896 "{{< meta tool.templat ..."
+            LINK_DEST_URL@1856..1896
+              TEXT@1856..1896 "{{< meta tool.templat ..."
           LINK_DEST_END@1896..1897 ")"
         TEXT@1897..1898 "."
         NEWLINE@1898..1899 "\n"
@@ -329,7 +334,8 @@ DOCUMENT@0..4373
           IMAGE_ALT_END@2028..2029 "]"
           IMAGE_DEST_START@2029..2030 "("
           LINK_DEST@2030..2068
-            TEXT@2030..2068 "images/github-create- ..."
+            LINK_DEST_URL@2030..2068
+              TEXT@2030..2068 "images/github-create- ..."
           IMAGE_DEST_END@2068..2069 ")"
           ATTRIBUTE@2069..2255
             TEXT@2069..2070 "{"
@@ -476,7 +482,8 @@ DOCUMENT@0..4373
         IMAGE_ALT_END@3026..3027 "]"
         IMAGE_DEST_START@3027..3028 "("
         LINK_DEST@3028..3051
-          TEXT@3028..3051 "images/rstudio-open.png"
+          LINK_DEST_URL@3028..3051
+            TEXT@3028..3051 "images/rstudio-open.png"
         IMAGE_DEST_END@3051..3052 ")"
         ATTRIBUTE@3052..3324
           TEXT@3052..3053 "{"
@@ -552,7 +559,8 @@ DOCUMENT@0..4373
         IMAGE_ALT_END@3682..3683 "]"
         IMAGE_DEST_START@3683..3684 "("
         LINK_DEST@3684..3707
-          TEXT@3684..3707 "images/jupyter-open.png"
+          LINK_DEST_URL@3684..3707
+            TEXT@3684..3707 "images/jupyter-open.png"
         IMAGE_DEST_END@3707..3708 ")"
         ATTRIBUTE@3708..3909
           TEXT@3708..3709 "{"
@@ -601,7 +609,8 @@ DOCUMENT@0..4373
         IMAGE_ALT_END@4135..4136 "]"
         IMAGE_DEST_START@4136..4137 "("
         LINK_DEST@4137..4159
-          TEXT@4137..4159 "images/vscode-open.png"
+          LINK_DEST_URL@4137..4159
+            TEXT@4137..4159 "images/vscode-open.png"
         IMAGE_DEST_END@4159..4160 ")"
         ATTRIBUTE@4160..4368
           TEXT@4160..4161 "{"

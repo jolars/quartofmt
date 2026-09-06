@@ -88,6 +88,22 @@ pub enum YamlNode {
     Scalar(YamlScalar),
 }
 
+impl YamlNode {
+    pub fn syntax(&self) -> &SyntaxNode {
+        match self {
+            Self::BlockMap(node) => node.syntax(),
+            Self::BlockSequence(node) => node.syntax(),
+            Self::FlowMap(node) => node.syntax(),
+            Self::FlowSequence(node) => node.syntax(),
+            Self::Scalar(node) => node.syntax(),
+        }
+    }
+
+    pub fn text_range(&self) -> TextRange {
+        self.syntax().text_range()
+    }
+}
+
 /// Resolve the single content node held by a value / item / document wrapper.
 /// Container children take precedence; a bare scalar value resolves to the
 /// first `YAML_SCALAR` node (anchors/tags/aliases are skipped). Returns `None`

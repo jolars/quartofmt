@@ -147,22 +147,60 @@ impl AstNode for LinkDest {
 }
 
 impl LinkDest {
-    /// Returns the URL/destination as a string (with surrounding parentheses).
+    pub fn url_node(&self) -> Option<LinkDestUrl> {
+        support::child(&self.0)
+    }
+
+    pub fn title_node(&self) -> Option<LinkDestTitle> {
+        support::child(&self.0)
+    }
+
+    /// Returns the URL/destination as a string, excluding link delimiters.
     pub fn url(&self) -> String {
         self.0.text().to_string()
     }
 
     /// Returns the URL without parentheses.
     pub fn url_content(&self) -> String {
+        if let Some(url) = self.url_node() {
+            return url.value();
+        }
         let text = self.0.text().to_string();
         text.trim_start_matches('(')
             .trim_end_matches(')')
             .to_string()
     }
 
+    pub fn title(&self) -> Option<String> {
+        self.title_node().map(|title| title.value())
+    }
+
+    pub fn url_range(&self) -> Option<rowan::TextRange> {
+        self.url_node().map(|url| url.value_range())
+    }
+
+    pub fn title_range(&self) -> Option<rowan::TextRange> {
+        self.title_node().map(|title| title.value_range())
+    }
+
+    pub fn range_text<'a>(&self, source: &'a str) -> &'a str {
+        range_text(source, self.0.text_range())
+    }
+
+    pub fn url_range_text<'a>(&self, source: &'a str) -> &'a str {
+        self.url_range()
+            .map(|range| range_text(source, range))
+            .unwrap_or_default()
+    }
+
+    pub fn title_range_text(&self, source: &str) -> Option<String> {
+        self.title_range()
+            .map(|range| range_text(source, range).to_string())
+    }
+
     /// Returns the range for a hash-anchor id within destination text (without '#').
     pub fn hash_anchor_id_range(&self) -> Option<rowan::TextRange> {
-        let text = self.0.text().to_string();
+        let text = self.url_content();
         let hash_idx = text.find('#')?;
         let after_hash = &text[hash_idx + 1..];
         let id_len = after_hash
@@ -173,15 +211,15 @@ impl LinkDest {
         if id_len == 0 {
             return None;
         }
-        let node_start: usize = self.0.text_range().start().into();
-        let start = rowan::TextSize::from((node_start + hash_idx + 1) as u32);
-        let end = rowan::TextSize::from((node_start + hash_idx + 1 + id_len) as u32);
+        let url_range = self.url_range()?;
+        let start = url_range.start() + rowan::TextSize::from((hash_idx + 1) as u32);
+        let end = start + rowan::TextSize::from(id_len as u32);
         Some(rowan::TextRange::new(start, end))
     }
 
     /// Returns the hash-anchor id within destination text (without '#').
     pub fn hash_anchor_id(&self) -> Option<String> {
-        let text = self.0.text().to_string();
+        let text = self.url_content();
         let hash_idx = text.find('#')?;
         let after_hash = &text[hash_idx + 1..];
         let id_len = after_hash
@@ -194,6 +232,108 @@ impl LinkDest {
         }
         Some(after_hash[..id_len].to_string())
     }
+}
+
+pub struct LinkDestUrl(SyntaxNode);
+
+impl AstNode for LinkDestUrl {
+    type Language = PanacheLanguage;
+
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == SyntaxKind::LINK_DEST_URL
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        Self::can_cast(syntax.kind()).then(|| Self(syntax))
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.0
+    }
+}
+
+impl LinkDestUrl {
+    pub fn value(&self) -> String {
+        child_text(&self.0, SyntaxKind::TEXT)
+    }
+
+    pub fn value_range(&self) -> rowan::TextRange {
+        child_text_range(&self.0, SyntaxKind::TEXT).unwrap_or_else(|| {
+            let marker_end = self
+                .0
+                .children_with_tokens()
+                .filter_map(|element| element.into_token())
+                .find(|token| token.kind() == SyntaxKind::LINK_DEST_URL_MARKER)
+                .map_or(self.0.text_range().start(), |token| {
+                    token.text_range().end()
+                });
+            rowan::TextRange::empty(marker_end)
+        })
+    }
+}
+
+pub struct LinkDestTitle(SyntaxNode);
+
+impl AstNode for LinkDestTitle {
+    type Language = PanacheLanguage;
+
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == SyntaxKind::LINK_DEST_TITLE
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        Self::can_cast(syntax.kind()).then(|| Self(syntax))
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.0
+    }
+}
+
+impl LinkDestTitle {
+    pub fn value(&self) -> String {
+        child_text(&self.0, SyntaxKind::TEXT)
+    }
+
+    pub fn value_range(&self) -> rowan::TextRange {
+        child_text_range(&self.0, SyntaxKind::TEXT).unwrap_or_else(|| {
+            let marker_end = self
+                .0
+                .children_with_tokens()
+                .filter_map(|element| element.into_token())
+                .find(|token| token.kind() == SyntaxKind::LINK_DEST_TITLE_MARKER)
+                .map_or(self.0.text_range().start(), |token| {
+                    token.text_range().end()
+                });
+            rowan::TextRange::empty(marker_end)
+        })
+    }
+}
+
+fn child_text(node: &SyntaxNode, kind: SyntaxKind) -> String {
+    node.children_with_tokens()
+        .filter_map(|element| element.into_token())
+        .filter(|token| token.kind() == kind)
+        .map(|token| token.text().to_string())
+        .collect()
+}
+
+fn child_text_range(node: &SyntaxNode, kind: SyntaxKind) -> Option<rowan::TextRange> {
+    let mut tokens = node
+        .children_with_tokens()
+        .filter_map(|element| element.into_token())
+        .filter(|token| token.kind() == kind);
+    let first = tokens.next()?.text_range();
+    let end = tokens
+        .last()
+        .map_or(first.end(), |token| token.text_range().end());
+    Some(rowan::TextRange::new(first.start(), end))
+}
+
+fn range_text(source: &str, range: rowan::TextRange) -> &str {
+    let start: usize = range.start().into();
+    let end: usize = range.end().into();
+    &source[start..end]
 }
 
 pub struct LinkRef(SyntaxNode);

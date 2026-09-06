@@ -4,6 +4,37 @@ use crate::parser::utils::attributes::{
 };
 use crate::syntax::{AstNode, PanacheLanguage, SyntaxKind, SyntaxNode, SyntaxToken};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AttributeEntry {
+    Identifier(AttributeValue),
+    Class(AttributeValue),
+    KeyValue {
+        key: AttributeValue,
+        value: AttributeValue,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AttributeValue {
+    raw: String,
+    value: String,
+    range: rowan::TextRange,
+}
+
+impl AttributeValue {
+    pub fn raw(&self) -> &str {
+        &self.raw
+    }
+
+    pub fn value(&self) -> &str {
+        &self.value
+    }
+
+    pub fn text_range(&self) -> rowan::TextRange {
+        self.range
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AttributeNode(SyntaxNode);
 
@@ -85,6 +116,83 @@ impl AttributeNode {
         self.reparse()
             .and_then(|attrs| attrs.identifier)
             .filter(|id| !id.is_empty())
+    }
+
+    /// Source-ordered attributes with cooked values and payload ranges.
+    pub fn entries(&self) -> Vec<AttributeEntry> {
+        if !self.has_structured_children() {
+            let range = self.0.text_range();
+            let mut entries = Vec::new();
+            if let Some(id) = self.id() {
+                entries.push(AttributeEntry::Identifier(AttributeValue {
+                    raw: id.clone(),
+                    value: id,
+                    range: self.id_value_range().unwrap_or(range),
+                }));
+            }
+            entries.extend(self.classes().into_iter().map(|class| {
+                AttributeEntry::Class(AttributeValue {
+                    raw: class.clone(),
+                    value: class,
+                    range,
+                })
+            }));
+            entries.extend(self.key_values().into_iter().map(|(key, value)| {
+                AttributeEntry::KeyValue {
+                    key: AttributeValue {
+                        raw: key.clone(),
+                        value: key,
+                        range,
+                    },
+                    value: AttributeValue {
+                        raw: value.clone(),
+                        value,
+                        range,
+                    },
+                }
+            }));
+            return entries;
+        }
+
+        self.0
+            .children_with_tokens()
+            .filter_map(|element| match element {
+                rowan::NodeOrToken::Token(token) if token.kind() == SyntaxKind::ATTR_ID => Some(
+                    AttributeEntry::Identifier(attribute_token_value(self, &token, Some('#'))),
+                ),
+                rowan::NodeOrToken::Token(token)
+                    if matches!(
+                        token.kind(),
+                        SyntaxKind::ATTR_CLASS | SyntaxKind::ATTR_UNNUMBERED
+                    ) =>
+                {
+                    let mut value = attribute_token_value(
+                        self,
+                        &token,
+                        (token.kind() == SyntaxKind::ATTR_CLASS).then_some('.'),
+                    );
+                    if token.kind() == SyntaxKind::ATTR_UNNUMBERED {
+                        value.value = "unnumbered".to_string();
+                    }
+                    Some(AttributeEntry::Class(value))
+                }
+                rowan::NodeOrToken::Node(node) if node.kind() == SyntaxKind::ATTR_KEY_VALUE => {
+                    let key = node
+                        .children_with_tokens()
+                        .filter_map(|element| element.into_token())
+                        .find(|token| token.kind() == SyntaxKind::ATTR_KEY)?;
+                    let value = node
+                        .children_with_tokens()
+                        .filter_map(|element| element.into_token())
+                        .find(|token| token.kind() == SyntaxKind::ATTR_VALUE)?;
+                    Some(AttributeEntry::KeyValue {
+                        key: attribute_token_value(self, &key, None),
+                        value: attribute_quoted_value(self, &value),
+                    })
+                }
+                _ => None,
+            })
+            .collect()
     }
 
     pub fn classes(&self) -> Vec<String> {
@@ -176,6 +284,50 @@ impl AttributeNode {
                 Some(rowan::TextRange::new(start, end))
             }
         }
+    }
+}
+
+fn attribute_token_value(
+    attributes: &AttributeNode,
+    token: &SyntaxToken,
+    prefix: Option<char>,
+) -> AttributeValue {
+    let raw = token.text().to_string();
+    let prefix_len = prefix
+        .filter(|prefix| raw.starts_with(*prefix))
+        .map_or(0, char::len_utf8);
+    let source_value = &raw[prefix_len..];
+    let range = token.text_range();
+    let value = attributes.decode_structured_value(source_value);
+    AttributeValue {
+        raw,
+        value,
+        range: rowan::TextRange::new(
+            range.start() + rowan::TextSize::from(prefix_len as u32),
+            range.end(),
+        ),
+    }
+}
+
+fn attribute_quoted_value(attributes: &AttributeNode, token: &SyntaxToken) -> AttributeValue {
+    let raw = token.text().to_string();
+    let quoted = raw.len() >= 2
+        && matches!(raw.as_bytes().first(), Some(b'"' | b'\''))
+        && raw.as_bytes().first() == raw.as_bytes().last();
+    let (source_value, trim) = if quoted {
+        (&raw[1..raw.len() - 1], 1u32)
+    } else {
+        (raw.as_str(), 0u32)
+    };
+    let range = token.text_range();
+    let value = attributes.decode_structured_value(source_value);
+    AttributeValue {
+        raw,
+        value,
+        range: rowan::TextRange::new(
+            range.start() + rowan::TextSize::from(trim),
+            range.end() - rowan::TextSize::from(trim),
+        ),
     }
 }
 

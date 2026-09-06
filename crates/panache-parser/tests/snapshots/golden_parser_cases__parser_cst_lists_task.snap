@@ -1,6 +1,5 @@
 ---
 source: crates/panache-parser/tests/golden_parser_cases.rs
-assertion_line: 97
 expression: cst_output
 ---
 DOCUMENT@0..734
@@ -153,7 +152,8 @@ DOCUMENT@0..734
           LINK_TEXT_END@394..395 "]"
           LINK_DEST_START@395..396 "("
           LINK_DEST@396..415
-            TEXT@396..415 "https://example.com"
+            LINK_DEST_URL@396..415
+              TEXT@396..415 "https://example.com"
           LINK_DEST_END@415..416 ")"
         NEWLINE@416..417 "\n"
   BLANK_LINE@417..418

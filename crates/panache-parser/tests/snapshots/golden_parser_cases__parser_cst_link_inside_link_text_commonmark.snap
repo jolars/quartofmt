@@ -13,7 +13,8 @@ DOCUMENT@0..24
       LINK_TEXT_END@9..10 "]"
       LINK_DEST_START@10..11 "("
       LINK_DEST@11..15
-        TEXT@11..15 "/uri"
+        LINK_DEST_URL@11..15
+          TEXT@11..15 "/uri"
       LINK_DEST_END@15..16 ")"
     TEXT@16..23 "](/uri)"
     NEWLINE@23..24 "\n"

@@ -22,7 +22,8 @@ DOCUMENT@0..254
       IMAGE_ALT_END@34..35 "]"
       IMAGE_DEST_START@35..36 "("
       LINK_DEST@36..45
-        TEXT@36..45 "image.png"
+        LINK_DEST_URL@36..45
+          TEXT@36..45 "image.png"
       IMAGE_DEST_END@45..46 ")"
     NEWLINE@46..47 "\n"
   BLANK_LINE@47..48
@@ -37,7 +38,13 @@ DOCUMENT@0..254
       IMAGE_ALT_END@70..71 "]"
       IMAGE_DEST_START@71..72 "("
       LINK_DEST@72..89
-        TEXT@72..89 "image.png \"Title\""
+        LINK_DEST_URL@72..81
+          TEXT@72..81 "image.png"
+        TEXT@81..82 " "
+        LINK_DEST_TITLE@82..89
+          LINK_DEST_TITLE_MARKER@82..83 "\""
+          TEXT@83..88 "Title"
+          LINK_DEST_TITLE_MARKER@88..89 "\""
       IMAGE_DEST_END@89..90 ")"
     NEWLINE@90..91 "\n"
   BLANK_LINE@91..92
@@ -51,7 +58,8 @@ DOCUMENT@0..254
       IMAGE_ALT_END@105..106 "]"
       IMAGE_DEST_START@106..107 "("
       LINK_DEST@107..116
-        TEXT@107..116 "image.png"
+        LINK_DEST_URL@107..116
+          TEXT@107..116 "image.png"
       IMAGE_DEST_END@116..117 ")"
     NEWLINE@117..118 "\n"
   BLANK_LINE@118..119
@@ -70,7 +78,8 @@ DOCUMENT@0..254
       IMAGE_ALT_END@151..152 "]"
       IMAGE_DEST_START@152..153 "("
       LINK_DEST@153..162
-        TEXT@153..162 "image.png"
+        LINK_DEST_URL@153..162
+          TEXT@153..162 "image.png"
       IMAGE_DEST_END@162..163 ")"
     NEWLINE@163..164 "\n"
   BLANK_LINE@164..165
@@ -100,6 +109,7 @@ DOCUMENT@0..254
       IMAGE_ALT_END@241..242 "]"
       IMAGE_DEST_START@242..243 "("
       LINK_DEST@243..252
-        TEXT@243..252 "image.png"
+        LINK_DEST_URL@243..252
+          TEXT@243..252 "image.png"
       IMAGE_DEST_END@252..253 ")"
     NEWLINE@253..254 "\n"

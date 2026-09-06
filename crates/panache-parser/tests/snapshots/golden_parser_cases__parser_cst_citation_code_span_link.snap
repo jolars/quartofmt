@@ -15,7 +15,8 @@ DOCUMENT@0..232
       LINK_TEXT_END@17..18 "]"
       LINK_DEST_START@18..19 "("
       LINK_DEST@19..63
-        TEXT@19..63 "https://www.npmjs.com ..."
+        LINK_DEST_URL@19..63
+          TEXT@19..63 "https://www.npmjs.com ..."
       LINK_DEST_END@63..64 ")"
     NEWLINE@64..65 "\n"
   BLANK_LINE@65..66
@@ -55,7 +56,8 @@ DOCUMENT@0..232
       LINK_TEXT_END@134..135 "]"
       LINK_DEST_START@135..136 "("
       LINK_DEST@136..158
-        TEXT@136..158 "mailto:jola@math.ku.dk"
+        LINK_DEST_URL@136..158
+          TEXT@136..158 "mailto:jola@math.ku.dk"
       LINK_DEST_END@158..159 ")"
     NEWLINE@159..160 "\n"
   BLANK_LINE@160..161
@@ -72,7 +74,8 @@ DOCUMENT@0..232
       LINK_TEXT_END@172..173 "]"
       LINK_DEST_START@173..174 "("
       LINK_DEST@174..193
-        TEXT@174..193 "https://example.com"
+        LINK_DEST_URL@174..193
+          TEXT@174..193 "https://example.com"
       LINK_DEST_END@193..194 ")"
     NEWLINE@194..195 "\n"
   BLANK_LINE@195..196

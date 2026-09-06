@@ -122,6 +122,14 @@ impl ListItem {
                 .is_some_and(|token| token.kind() == SyntaxKind::TASK_CHECKBOX)
         })
     }
+
+    pub fn task_checked(&self) -> Option<bool> {
+        self.0.children_with_tokens().find_map(|elem| {
+            elem.as_token()
+                .filter(|token| token.kind() == SyntaxKind::TASK_CHECKBOX)
+                .map(|token| token.text().bytes().any(|byte| matches!(byte, b'x' | b'X')))
+        })
+    }
 }
 
 #[cfg(test)]

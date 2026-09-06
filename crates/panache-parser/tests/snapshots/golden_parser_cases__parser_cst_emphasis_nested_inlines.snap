@@ -183,7 +183,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@346..347 "]"
         LINK_DEST_START@347..348 "("
         LINK_DEST@348..351
-          TEXT@348..351 "url"
+          LINK_DEST_URL@348..351
+            TEXT@348..351 "url"
         LINK_DEST_END@351..352 ")"
       TEXT@352..356 " end"
       EMPHASIS_MARKER@356..357 "*"
@@ -202,7 +203,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@371..372 "]"
         LINK_DEST_START@372..373 "("
         LINK_DEST@373..376
-          TEXT@373..376 "url"
+          LINK_DEST_URL@373..376
+            TEXT@373..376 "url"
         LINK_DEST_END@376..377 ")"
       TEXT@377..381 " end"
       STRONG_MARKER@381..383 "**"
@@ -221,7 +223,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@403..404 "]"
         LINK_DEST_START@404..405 "("
         LINK_DEST@405..408
-          TEXT@405..408 "url"
+          LINK_DEST_URL@405..408
+            TEXT@405..408 "url"
         LINK_DEST_END@408..409 ")"
       TEXT@409..413 " end"
       EMPHASIS_MARKER@413..414 "*"
@@ -240,7 +243,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@436..437 "]"
         LINK_DEST_START@437..438 "("
         LINK_DEST@438..441
-          TEXT@438..441 "url"
+          LINK_DEST_URL@438..441
+            TEXT@438..441 "url"
         LINK_DEST_END@441..442 ")"
       TEXT@442..446 " end"
       STRONG_MARKER@446..448 "**"
@@ -268,7 +272,8 @@ DOCUMENT@0..1387
         IMAGE_ALT_END@484..485 "]"
         IMAGE_DEST_START@485..486 "("
         LINK_DEST@486..493
-          TEXT@486..493 "img.png"
+          LINK_DEST_URL@486..493
+            TEXT@486..493 "img.png"
         IMAGE_DEST_END@493..494 ")"
       TEXT@494..498 " end"
       EMPHASIS_MARKER@498..499 "*"
@@ -287,7 +292,8 @@ DOCUMENT@0..1387
         IMAGE_ALT_END@513..514 "]"
         IMAGE_DEST_START@514..515 "("
         LINK_DEST@515..522
-          TEXT@515..522 "img.png"
+          LINK_DEST_URL@515..522
+            TEXT@515..522 "img.png"
         IMAGE_DEST_END@522..523 ")"
       TEXT@523..527 " end"
       STRONG_MARKER@527..529 "**"
@@ -449,7 +455,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@798..799 "]"
         LINK_DEST_START@799..800 "("
         LINK_DEST@800..803
-          TEXT@800..803 "url"
+          LINK_DEST_URL@800..803
+            TEXT@800..803 "url"
         LINK_DEST_END@803..804 ")"
       TEXT@804..810 ", and "
       STRIKEOUT@810..820
@@ -480,7 +487,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@863..864 "]"
         LINK_DEST_START@864..865 "("
         LINK_DEST@865..868
-          TEXT@865..868 "url"
+          LINK_DEST_URL@865..868
+            TEXT@865..868 "url"
         LINK_DEST_END@868..869 ")"
       TEXT@869..875 ", and "
       STRIKEOUT@875..885
@@ -536,7 +544,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@965..966 "]"
         LINK_DEST_START@966..967 "("
         LINK_DEST@967..970
-          TEXT@967..970 "url"
+          LINK_DEST_URL@967..970
+            TEXT@967..970 "url"
         LINK_DEST_END@970..971 ")"
       EMPHASIS_MARKER@971..972 "*"
     NEWLINE@972..973 "\n"
@@ -553,7 +562,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@981..982 "]"
         LINK_DEST_START@982..983 "("
         LINK_DEST@983..986
-          TEXT@983..986 "url"
+          LINK_DEST_URL@983..986
+            TEXT@983..986 "url"
         LINK_DEST_END@986..987 ")"
       STRONG_MARKER@987..989 "**"
     NEWLINE@989..990 "\n"
@@ -581,7 +591,8 @@ DOCUMENT@0..1387
       LINK_TEXT_END@1034..1035 "]"
       LINK_DEST_START@1035..1036 "("
       LINK_DEST@1036..1039
-        TEXT@1036..1039 "url"
+        LINK_DEST_URL@1036..1039
+          TEXT@1036..1039 "url"
       LINK_DEST_END@1039..1040 ")"
     NEWLINE@1040..1041 "\n"
   BLANK_LINE@1041..1042
@@ -633,7 +644,8 @@ DOCUMENT@0..1387
         LINK_TEXT_END@1137..1138 "]"
         LINK_DEST_START@1138..1139 "("
         LINK_DEST@1139..1142
-          TEXT@1139..1142 "url"
+          LINK_DEST_URL@1139..1142
+            TEXT@1139..1142 "url"
         LINK_DEST_END@1142..1143 ")"
       TEXT@1143..1147 " end"
       EMPHASIS_MARKER@1147..1148 "*"
@@ -718,7 +730,8 @@ DOCUMENT@0..1387
           LINK_TEXT_END@1337..1338 "]"
           LINK_DEST_START@1338..1339 "("
           LINK_DEST@1339..1342
-            TEXT@1339..1342 "url"
+            LINK_DEST_URL@1339..1342
+              TEXT@1339..1342 "url"
           LINK_DEST_END@1342..1343 ")"
         TEXT@1343..1348 " here"
         EMPHASIS_MARKER@1348..1349 "*"

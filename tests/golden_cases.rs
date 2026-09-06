@@ -410,6 +410,7 @@ golden_test_cases!(
     inline_code,
     inline_code_attribute_normalization,
     inline_link_dest_strict_commonmark,
+    link_destination_structure,
     inline_footnotes,
     inline_footnote_crossref_spacing_430,
     inline_math,

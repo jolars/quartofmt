@@ -19,6 +19,7 @@ DOCUMENT@0..19
         LINK_TEXT_END@14..15 "]"
         LINK_DEST_START@15..16 "("
         LINK_DEST@16..17
-          TEXT@16..17 "u"
+          LINK_DEST_URL@16..17
+            TEXT@16..17 "u"
         LINK_DEST_END@17..18 ")"
       NEWLINE@18..19 "\n"

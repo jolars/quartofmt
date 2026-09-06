@@ -1027,6 +1027,13 @@ pub struct ParserOptions {
     pub extensions: Extensions,
     /// Compatibility target for ambiguous Pandoc behavior.
     pub pandoc_compat: PandocCompat,
+    /// Preserve unresolved reference-shaped bracket groups as typed CST nodes.
+    ///
+    /// CommonMark normally treats an unresolved reference as literal text. This
+    /// opt-in retains that source shape for downstream semantic extensions while
+    /// leaving ordinary CommonMark and GFM parsing unchanged by default.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub preserve_unresolved_references: bool,
     /// Additional cross-reference key prefixes (beyond the Quarto built-ins
     /// recognized by [`crate::parser::inlines::citations::is_quarto_crossref_key`])
     /// that should parse as cross-references rather than citations. Populated
@@ -1057,6 +1064,7 @@ impl Default for ParserOptions {
             dialect: Dialect::for_flavor(flavor),
             extensions: Extensions::for_flavor(flavor),
             pandoc_compat: PandocCompat::default(),
+            preserve_unresolved_references: false,
             crossref_prefixes: Vec::new(),
             refdef_labels: None,
         }
@@ -1064,6 +1072,16 @@ impl Default for ParserOptions {
 }
 
 impl ParserOptions {
+    /// Construct internally consistent parser options for a user-facing flavor.
+    pub fn for_flavor(flavor: Flavor) -> Self {
+        Self {
+            flavor,
+            dialect: Dialect::for_flavor(flavor),
+            extensions: Extensions::for_flavor(flavor),
+            ..Self::default()
+        }
+    }
+
     pub fn effective_pandoc_compat(&self) -> PandocCompat {
         self.pandoc_compat.effective()
     }

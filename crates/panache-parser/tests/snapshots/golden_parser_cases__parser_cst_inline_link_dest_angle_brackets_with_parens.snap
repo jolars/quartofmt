@@ -12,6 +12,9 @@ DOCUMENT@0..23
       LINK_TEXT_END@5..6 "]"
       LINK_DEST_START@6..7 "("
       LINK_DEST@7..21
-        TEXT@7..21 "<foo(and(bar)>"
+        LINK_DEST_URL@7..21
+          LINK_DEST_URL_MARKER@7..8 "<"
+          TEXT@8..20 "foo(and(bar)"
+          LINK_DEST_URL_MARKER@20..21 ">"
       LINK_DEST_END@21..22 ")"
     NEWLINE@22..23 "\n"

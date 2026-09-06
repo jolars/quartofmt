@@ -31,7 +31,13 @@ DOCUMENT@0..125
       LINK_TEXT_END@70..71 "]"
       LINK_DEST_START@71..72 "("
       LINK_DEST@72..96
-        TEXT@72..96 "/u&ouml;url \"t&ouml;tle\""
+        LINK_DEST_URL@72..83
+          TEXT@72..83 "/u&ouml;url"
+        TEXT@83..84 " "
+        LINK_DEST_TITLE@84..96
+          LINK_DEST_TITLE_MARKER@84..85 "\""
+          TEXT@85..95 "t&ouml;tle"
+          LINK_DEST_TITLE_MARKER@95..96 "\""
       LINK_DEST_END@96..97 ")"
     NEWLINE@97..98 "\n"
   BLANK_LINE@98..99

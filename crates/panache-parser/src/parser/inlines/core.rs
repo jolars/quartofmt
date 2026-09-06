@@ -39,10 +39,10 @@ use super::inline_footnotes::{
 use super::inline_html::{emit_inline_html, try_parse_inline_html};
 use super::latex::{parse_latex_command, try_parse_latex_command, try_parse_raw_math_environment};
 use super::links::{
-    LinkScanContext, emit_autolink, emit_bare_uri_link, emit_inline_image, emit_inline_link,
-    emit_reference_image, emit_reference_link, emit_unresolved_reference, try_parse_autolink,
-    try_parse_bare_uri, try_parse_inline_image, try_parse_inline_link, try_parse_reference_image,
-    try_parse_reference_link,
+    LinkScanContext, emit_autolink, emit_bare_uri_link, emit_inline_image_parts,
+    emit_inline_link_parts, emit_reference_image, emit_reference_link, emit_unresolved_reference,
+    try_parse_autolink, try_parse_bare_uri, try_parse_inline_image_parts,
+    try_parse_inline_link_parts, try_parse_reference_image, try_parse_reference_link,
 };
 use super::mark::{emit_mark, try_parse_mark};
 use super::math::{
@@ -523,7 +523,7 @@ fn parse_inline_range_impl(
                 if is_image {
                     if config.extensions.inline_images
                         && let Some((len, alt_text, dest, attributes)) =
-                            try_parse_inline_image(&text[pos..], ctx)
+                            try_parse_inline_image_parts(&text[pos..], ctx)
                         && pos + len >= dispo_suffix_end
                         && pos + len <= end
                     {
@@ -534,7 +534,7 @@ fn parse_inline_range_impl(
                             "IR: dispatcher overrode UnresolvedReference with inline image at pos {}",
                             pos
                         );
-                        emit_inline_image(
+                        emit_inline_image_parts(
                             builder,
                             &text[pos..pos + len],
                             alt_text,
@@ -549,7 +549,7 @@ fn parse_inline_range_impl(
                     }
                 } else if config.extensions.inline_links
                     && let Some((len, link_text, dest, attributes)) =
-                        try_parse_inline_link(&text[pos..], is_commonmark, ctx)
+                        try_parse_inline_link_parts(&text[pos..], is_commonmark, ctx)
                     && pos + len >= dispo_suffix_end
                     && pos + len <= end
                 {
@@ -560,7 +560,7 @@ fn parse_inline_range_impl(
                         "IR: dispatcher overrode UnresolvedReference with inline link at pos {}",
                         pos
                     );
-                    emit_inline_link(
+                    emit_inline_link_parts(
                         builder,
                         &text[pos..pos + len],
                         link_text,
@@ -619,7 +619,7 @@ fn parse_inline_range_impl(
                 if is_image {
                     if config.extensions.inline_images
                         && let Some((len, alt_text, dest, attributes)) =
-                            try_parse_inline_image(&text[pos..], ctx)
+                            try_parse_inline_image_parts(&text[pos..], ctx)
                         && pos + len >= dispo_suffix_end
                         && pos + len <= end
                     {
@@ -627,7 +627,7 @@ fn parse_inline_range_impl(
                             builder.token(SyntaxKind::TEXT.into(), &text[text_start..pos]);
                         }
                         log::trace!("IR: matched inline image at pos {}", pos);
-                        emit_inline_image(
+                        emit_inline_image_parts(
                             builder,
                             &text[pos..pos + len],
                             alt_text,
@@ -670,7 +670,7 @@ fn parse_inline_range_impl(
                 } else {
                     if config.extensions.inline_links
                         && let Some((len, link_text, dest, attributes)) =
-                            try_parse_inline_link(&text[pos..], is_commonmark, ctx)
+                            try_parse_inline_link_parts(&text[pos..], is_commonmark, ctx)
                         && pos + len >= dispo_suffix_end
                         && pos + len <= end
                     {
@@ -678,7 +678,7 @@ fn parse_inline_range_impl(
                             builder.token(SyntaxKind::TEXT.into(), &text[text_start..pos]);
                         }
                         log::trace!("IR: matched inline link at pos {}", pos);
-                        emit_inline_link(
+                        emit_inline_link_parts(
                             builder,
                             &text[pos..pos + len],
                             link_text,

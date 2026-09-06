@@ -16,12 +16,14 @@ DOCUMENT@0..192
           IMAGE_ALT_END@14..15 "]"
           IMAGE_DEST_START@15..16 "("
           LINK_DEST@16..81
-            TEXT@16..81 "https://badge.fury.io ..."
+            LINK_DEST_URL@16..81
+              TEXT@16..81 "https://badge.fury.io ..."
           IMAGE_DEST_END@81..82 ")"
       LINK_TEXT_END@82..83 "]"
       LINK_DEST_START@83..84 "("
       LINK_DEST@84..123
-        TEXT@84..123 "https://www.npmjs.com ..."
+        LINK_DEST_URL@84..123
+          TEXT@84..123 "https://www.npmjs.com ..."
       LINK_DEST_END@123..124 ")"
     NEWLINE@124..125 "\n"
   BLANK_LINE@125..126

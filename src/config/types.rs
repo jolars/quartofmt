@@ -1056,6 +1056,7 @@ impl Config {
             dialect: panache_parser::Dialect::for_flavor(self.flavor),
             extensions: self.extensions.clone(),
             pandoc_compat: self.parser,
+            preserve_unresolved_references: false,
             crossref_prefixes: self.crossref_prefixes.clone(),
             refdef_labels: None,
         }

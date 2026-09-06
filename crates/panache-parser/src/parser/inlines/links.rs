@@ -12,6 +12,8 @@
 use super::code_spans::try_parse_code_span;
 use super::core::parse_inline_text;
 use super::inline_html::try_parse_inline_html;
+use std::ops::Range;
+
 use super::sink::InlineSink;
 use crate::options::ParserOptions;
 use crate::syntax::SyntaxKind;
@@ -45,6 +47,20 @@ pub struct LinkScanContext {
     /// from its inline raw HTML grammar.
     pub dialect: crate::options::Dialect,
 }
+
+/// Destination slots captured while the inline-link scanner already has the
+/// source split into URL, title, delimiters, and trivia.
+#[derive(Debug, Clone)]
+pub(super) struct ParsedLinkDestination<'a> {
+    raw: &'a str,
+    url: Range<usize>,
+    url_delimiters: Option<DestinationDelimiters>,
+    title: Option<Range<usize>>,
+    title_delimiters: Option<DestinationDelimiters>,
+}
+
+type DestinationDelimiters = (Range<usize>, Range<usize>);
+type ParsedTitle = (Option<Range<usize>>, Option<DestinationDelimiters>);
 
 impl Default for LinkScanContext {
     fn default() -> Self {
@@ -282,6 +298,14 @@ pub fn try_parse_inline_image(
     text: &str,
     ctx: LinkScanContext,
 ) -> Option<(usize, &str, &str, Option<&str>)> {
+    try_parse_inline_image_parts(text, ctx)
+        .map(|(len, alt, destination, attrs)| (len, alt, destination.raw, attrs))
+}
+
+pub(super) fn try_parse_inline_image_parts(
+    text: &str,
+    ctx: LinkScanContext,
+) -> Option<(usize, &str, ParsedLinkDestination<'_>, Option<&str>)> {
     if !text.starts_with("![") {
         return None;
     }
@@ -299,6 +323,10 @@ pub fn try_parse_inline_image(
 
     let close_paren = find_dest_close_paren(remaining)?;
     let dest_content = &remaining[..close_paren];
+    let destination = parse_link_destination_parts(
+        dest_content,
+        ctx.dialect == crate::options::Dialect::CommonMark,
+    )?;
 
     let after_paren = dest_start + close_paren + 1;
     let after_close = &text[after_paren..];
@@ -310,21 +338,44 @@ pub fn try_parse_inline_image(
         if let Some((_attrs, _)) = try_parse_trailing_attributes(attr_text) {
             let total_len = after_paren + close_brace_pos + 1;
             let raw_attrs = attr_text;
-            return Some((total_len, alt_text, dest_content, Some(raw_attrs)));
+            return Some((total_len, alt_text, destination, Some(raw_attrs)));
         }
     }
 
     let total_len = after_paren;
-    Some((total_len, alt_text, dest_content, None))
+    Some((total_len, alt_text, destination, None))
 }
 
 /// Emit an inline image node to the builder.
 /// Note: alt_text may contain inline elements and should be parsed recursively.
 pub fn emit_inline_image(
     builder: &mut impl InlineSink,
-    _text: &str,
+    text: &str,
     alt_text: &str,
     dest: &str,
+    raw_attributes: Option<&str>,
+    config: &ParserOptions,
+    suppress_footnote_refs: bool,
+) {
+    let destination =
+        parse_link_destination_parts(dest, config.dialect == crate::options::Dialect::CommonMark)
+            .unwrap_or_else(|| parse_pandoc_destination_parts(dest));
+    emit_inline_image_parts(
+        builder,
+        text,
+        alt_text,
+        destination,
+        raw_attributes,
+        config,
+        suppress_footnote_refs,
+    );
+}
+
+pub(super) fn emit_inline_image_parts(
+    builder: &mut impl InlineSink,
+    _text: &str,
+    alt_text: &str,
+    dest: ParsedLinkDestination<'_>,
     raw_attributes: Option<&str>,
     config: &ParserOptions,
     suppress_footnote_refs: bool,
@@ -343,9 +394,7 @@ pub fn emit_inline_image(
 
     builder.token(SyntaxKind::IMAGE_DEST_START.into(), "(");
 
-    builder.start_node(SyntaxKind::LINK_DEST.into());
-    builder.token(SyntaxKind::TEXT.into(), dest);
-    builder.finish_node();
+    emit_link_destination(builder, &dest);
 
     builder.token(SyntaxKind::IMAGE_DEST_END.into(), ")");
 
@@ -592,6 +641,15 @@ pub fn try_parse_inline_link(
     strict_dest: bool,
     ctx: LinkScanContext,
 ) -> Option<(usize, &str, &str, Option<&str>)> {
+    try_parse_inline_link_parts(text, strict_dest, ctx)
+        .map(|(len, label, destination, attrs)| (len, label, destination.raw, attrs))
+}
+
+pub(super) fn try_parse_inline_link_parts(
+    text: &str,
+    strict_dest: bool,
+    ctx: LinkScanContext,
+) -> Option<(usize, &str, ParsedLinkDestination<'_>, Option<&str>)> {
     if !text.starts_with('[') {
         return None;
     }
@@ -609,10 +667,7 @@ pub fn try_parse_inline_link(
 
     let close_paren = find_dest_close_paren(remaining)?;
     let dest_content = &remaining[..close_paren];
-
-    if strict_dest && !dest_and_title_ok_commonmark(dest_content) {
-        return None;
-    }
+    let destination = parse_link_destination_parts(dest_content, strict_dest)?;
 
     if ctx.disallow_inner_links && link_text_contains_inner_link(link_text, ctx, strict_dest) {
         return None;
@@ -628,12 +683,12 @@ pub fn try_parse_inline_link(
         if let Some((_attrs, _)) = try_parse_trailing_attributes(attr_text) {
             let total_len = after_paren + close_brace_pos + 1;
             let raw_attrs = attr_text;
-            return Some((total_len, link_text, dest_content, Some(raw_attrs)));
+            return Some((total_len, link_text, destination, Some(raw_attrs)));
         }
     }
 
     let total_len = after_paren;
-    Some((total_len, link_text, dest_content, None))
+    Some((total_len, link_text, destination, None))
 }
 
 /// CommonMark §6.4 destination + optional title validation. The text passed
@@ -644,144 +699,333 @@ pub fn try_parse_inline_link(
 /// - bracketed destination is `<...>` with no newlines and no unescaped `<>`;
 /// - the optional title is delimited by `"..."`, `'...'`, or `(...)`;
 /// - any text outside that structure invalidates the link.
-fn dest_and_title_ok_commonmark(content: &str) -> bool {
-    let trimmed = trim_start_link_ws(content);
-    if trimmed.is_empty() {
-        return true;
+fn parse_link_destination_parts(content: &str, strict: bool) -> Option<ParsedLinkDestination<'_>> {
+    if strict {
+        parse_commonmark_destination_parts(content)
+    } else {
+        Some(parse_pandoc_destination_parts(content))
+    }
+}
+
+fn parse_commonmark_destination_parts(content: &str) -> Option<ParsedLinkDestination<'_>> {
+    let bytes = content.as_bytes();
+    let mut p = link_ws_end(bytes, 0);
+    if p == bytes.len() {
+        return Some(ParsedLinkDestination {
+            raw: content,
+            url: p..p,
+            url_delimiters: None,
+            title: None,
+            title_delimiters: None,
+        });
     }
 
-    let after_dest = if let Some(rest) = trimmed.strip_prefix('<') {
+    let (url, url_delimiters, dest_end) = if bytes[p] == b'<' {
+        let open = p..p + 1;
+        p += 1;
+        let start = p;
         let mut escape = false;
-        let mut end_byte = None;
-        for (i, c) in rest.char_indices() {
+        while p < bytes.len() {
+            let byte = bytes[p];
             if escape {
                 escape = false;
+                p += 1;
                 continue;
             }
-            match c {
-                '\\' => escape = true,
-                '\n' | '<' => return false,
-                '>' => {
-                    end_byte = Some(i);
-                    break;
+            match byte {
+                b'\\' => {
+                    escape = true;
+                    p += 1;
                 }
-                _ => {}
+                b'\n' | b'<' => return None,
+                b'>' => break,
+                _ => p += 1,
             }
         }
-        match end_byte {
-            Some(e) => &rest[e + 1..],
-            None => return false,
+        if p >= bytes.len() || bytes[p] != b'>' {
+            return None;
         }
+        let close = p..p + 1;
+        (start..p, Some((open, close)), p + 1)
     } else {
+        let start = p;
         let mut escape = false;
-        let mut depth: i32 = 0;
-        let mut end = trimmed.len();
-        for (i, c) in trimmed.char_indices() {
+        let mut depth = 0i32;
+        while p < bytes.len() {
+            let byte = bytes[p];
             if escape {
                 escape = false;
+                p += 1;
                 continue;
             }
-            match c {
-                '\\' => escape = true,
-                ' ' | '\t' | '\n' => {
-                    end = i;
-                    break;
+            match byte {
+                b'\\' => {
+                    escape = true;
+                    p += 1;
                 }
-                _ if c.is_ascii_control() => return false,
-                '(' => depth += 1,
-                ')' => {
+                b' ' | b'\t' | b'\n' => break,
+                byte if byte < 0x20 || byte == 0x7f => return None,
+                b'(' => {
+                    depth += 1;
+                    p += 1;
+                }
+                b')' => {
                     if depth == 0 {
-                        end = i;
                         break;
                     }
                     depth -= 1;
+                    p += 1;
                 }
-                _ => {}
+                _ => p += 1,
             }
         }
-        if depth != 0 {
-            return false;
+        if p == start || depth != 0 {
+            return None;
         }
-        if end == 0 {
-            return false;
-        }
-        &trimmed[end..]
+        (start..p, None, p)
     };
 
-    let after_dest = trim_start_link_ws(after_dest);
-    if after_dest.is_empty() {
-        return true;
+    p = link_ws_end(bytes, dest_end);
+    if p == bytes.len() {
+        return Some(ParsedLinkDestination {
+            raw: content,
+            url,
+            url_delimiters,
+            title: None,
+            title_delimiters: None,
+        });
     }
 
-    let bytes = after_dest.as_bytes();
-    let close = match bytes[0] {
+    let open = p;
+    let close_byte = match bytes[p] {
         b'"' => b'"',
         b'\'' => b'\'',
         b'(' => b')',
-        _ => return false,
+        _ => return None,
     };
-    let opens_paren = bytes[0] == b'(';
+    let opens_paren = bytes[p] == b'(';
+    p += 1;
+    let title_start = p;
     let mut escape = false;
-    let mut title_close_pos = None;
-    for (i, &b) in after_dest.as_bytes().iter().enumerate().skip(1) {
+    while p < bytes.len() {
+        let byte = bytes[p];
         if escape {
             escape = false;
+            p += 1;
             continue;
         }
-        if b == b'\\' {
+        if byte == b'\\' {
             escape = true;
+            p += 1;
             continue;
         }
-        if opens_paren && b == b'(' {
-            return false;
+        if opens_paren && byte == b'(' {
+            return None;
         }
-        if b == close {
-            title_close_pos = Some(i);
+        if byte == close_byte {
             break;
         }
+        p += 1;
     }
-    let close_idx = match title_close_pos {
-        Some(p) => p,
-        None => return false,
-    };
+    if p >= bytes.len() {
+        return None;
+    }
+    let title_end = p;
+    let close = p..p + 1;
+    p = link_ws_end(bytes, p + 1);
+    if p != bytes.len() {
+        return None;
+    }
 
-    let after_title = &after_dest[close_idx + 1..];
-    is_link_ws_only(after_title)
+    Some(ParsedLinkDestination {
+        raw: content,
+        url,
+        url_delimiters,
+        title: Some(title_start..title_end),
+        title_delimiters: Some((open..open + 1, close)),
+    })
 }
 
-/// Strip leading ASCII space/tab/newline bytes. Byte-level equivalent of
-/// `s.trim_start_matches([' ', '\t', '\n'])`; called for every
-/// CommonMark inline-link destination/title scan, so the slice-pattern
-/// MultiCharEqSearcher overhead matters.
-#[inline]
-fn trim_start_link_ws(s: &str) -> &str {
-    let bytes = s.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        let b = bytes[i];
-        if b == b' ' || b == b'\t' || b == b'\n' {
-            i += 1;
-        } else {
-            break;
-        }
-    }
-    unsafe { std::str::from_utf8_unchecked(&bytes[i..]) }
-}
-
-#[inline]
-fn is_link_ws_only(s: &str) -> bool {
-    s.as_bytes()
+fn parse_pandoc_destination_parts(content: &str) -> ParsedLinkDestination<'_> {
+    let bytes = content.as_bytes();
+    let trimmed_start = link_ws_end(bytes, 0);
+    let trimmed_end = bytes
         .iter()
-        .all(|&b| b == b' ' || b == b'\t' || b == b'\n')
+        .rposition(|byte| !matches!(byte, b' ' | b'\t' | b'\n'))
+        .map_or(trimmed_start, |index| index + 1);
+
+    if trimmed_start >= trimmed_end {
+        return ParsedLinkDestination {
+            raw: content,
+            url: trimmed_start..trimmed_start,
+            url_delimiters: None,
+            title: None,
+            title_delimiters: None,
+        };
+    }
+
+    if bytes[trimmed_start] == b'<'
+        && let Some(relative_end) = content[trimmed_start + 1..trimmed_end].find('>')
+    {
+        let close_index = trimmed_start + 1 + relative_end;
+        let after = link_ws_end(bytes, close_index + 1);
+        let (title, title_delimiters) = parse_permissive_title(bytes, after, trimmed_end);
+        return ParsedLinkDestination {
+            raw: content,
+            url: trimmed_start + 1..close_index,
+            url_delimiters: Some((
+                trimmed_start..trimmed_start + 1,
+                close_index..close_index + 1,
+            )),
+            title,
+            title_delimiters,
+        };
+    }
+
+    let mut url_end = trimmed_end;
+    let mut index = trimmed_start;
+    while index < trimmed_end {
+        if matches!(bytes[index], b' ' | b'\t' | b'\n') {
+            let next = link_ws_end(bytes, index);
+            if next < trimmed_end && matches!(bytes[next], b'"' | b'\'' | b'(') {
+                url_end = index;
+                break;
+            }
+            index = next;
+        } else {
+            index += 1;
+        }
+    }
+    let title_start = link_ws_end(bytes, url_end);
+    let (title, title_delimiters) = parse_permissive_title(bytes, title_start, trimmed_end);
+    ParsedLinkDestination {
+        raw: content,
+        url: trimmed_start..url_end,
+        url_delimiters: None,
+        title,
+        title_delimiters,
+    }
+}
+
+fn parse_permissive_title(bytes: &[u8], start: usize, end: usize) -> ParsedTitle {
+    if start >= end {
+        return (None, None);
+    }
+    let close_byte = match bytes[start] {
+        b'"' => b'"',
+        b'\'' => b'\'',
+        b'(' => b')',
+        _ => return (None, None),
+    };
+    let Some(relative_close) = bytes[start + 1..end]
+        .iter()
+        .rposition(|byte| *byte == close_byte)
+    else {
+        return (None, None);
+    };
+    let close = start + 1 + relative_close;
+    (
+        Some(start + 1..close),
+        Some((start..start + 1, close..close + 1)),
+    )
+}
+
+fn link_ws_end(bytes: &[u8], mut index: usize) -> usize {
+    while index < bytes.len() && matches!(bytes[index], b' ' | b'\t' | b'\n') {
+        index += 1;
+    }
+    index
+}
+
+fn emit_link_destination(builder: &mut impl InlineSink, destination: &ParsedLinkDestination<'_>) {
+    builder.start_node(SyntaxKind::LINK_DEST.into());
+    let mut cursor = 0;
+
+    if let Some((open, close)) = &destination.url_delimiters {
+        emit_destination_text(builder, &destination.raw[cursor..open.start]);
+        builder.start_node(SyntaxKind::LINK_DEST_URL.into());
+        builder.token(
+            SyntaxKind::LINK_DEST_URL_MARKER.into(),
+            &destination.raw[open.clone()],
+        );
+        builder.token(
+            SyntaxKind::TEXT.into(),
+            &destination.raw[destination.url.clone()],
+        );
+        builder.token(
+            SyntaxKind::LINK_DEST_URL_MARKER.into(),
+            &destination.raw[close.clone()],
+        );
+        builder.finish_node();
+        cursor = close.end;
+    } else {
+        emit_destination_text(builder, &destination.raw[cursor..destination.url.start]);
+        builder.start_node(SyntaxKind::LINK_DEST_URL.into());
+        builder.token(
+            SyntaxKind::TEXT.into(),
+            &destination.raw[destination.url.clone()],
+        );
+        builder.finish_node();
+        cursor = destination.url.end;
+    }
+
+    if let (Some(title), Some((open, close))) = (&destination.title, &destination.title_delimiters)
+    {
+        emit_destination_text(builder, &destination.raw[cursor..open.start]);
+        builder.start_node(SyntaxKind::LINK_DEST_TITLE.into());
+        builder.token(
+            SyntaxKind::LINK_DEST_TITLE_MARKER.into(),
+            &destination.raw[open.clone()],
+        );
+        builder.token(SyntaxKind::TEXT.into(), &destination.raw[title.clone()]);
+        builder.token(
+            SyntaxKind::LINK_DEST_TITLE_MARKER.into(),
+            &destination.raw[close.clone()],
+        );
+        builder.finish_node();
+        cursor = close.end;
+    }
+
+    emit_destination_text(builder, &destination.raw[cursor..]);
+    builder.finish_node();
+}
+
+fn emit_destination_text(builder: &mut impl InlineSink, text: &str) {
+    if !text.is_empty() {
+        builder.token(SyntaxKind::TEXT.into(), text);
+    }
 }
 
 /// Emit an inline link node to the builder.
 /// Note: link_text may contain inline elements and should be parsed recursively.
 pub fn emit_inline_link(
     builder: &mut impl InlineSink,
-    _text: &str,
+    text: &str,
     link_text: &str,
     dest: &str,
+    raw_attributes: Option<&str>,
+    config: &ParserOptions,
+    suppress_footnote_refs: bool,
+) {
+    let destination =
+        parse_link_destination_parts(dest, config.dialect == crate::options::Dialect::CommonMark)
+            .unwrap_or_else(|| parse_pandoc_destination_parts(dest));
+    emit_inline_link_parts(
+        builder,
+        text,
+        link_text,
+        destination,
+        raw_attributes,
+        config,
+        suppress_footnote_refs,
+    );
+}
+
+pub(super) fn emit_inline_link_parts(
+    builder: &mut impl InlineSink,
+    _text: &str,
+    link_text: &str,
+    dest: ParsedLinkDestination<'_>,
     raw_attributes: Option<&str>,
     config: &ParserOptions,
     suppress_footnote_refs: bool,
@@ -800,9 +1044,7 @@ pub fn emit_inline_link(
 
     builder.token(SyntaxKind::LINK_DEST_START.into(), "(");
 
-    builder.start_node(SyntaxKind::LINK_DEST.into());
-    builder.token(SyntaxKind::TEXT.into(), dest);
-    builder.finish_node();
+    emit_link_destination(builder, &dest);
 
     builder.token(SyntaxKind::LINK_DEST_END.into(), ")");
 

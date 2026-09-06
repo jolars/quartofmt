@@ -627,6 +627,7 @@ golden_test_cases!(
     inline_link_code_span_precedence,
     inline_link_dest_angle_brackets_with_parens,
     inline_link_dest_strict_commonmark,
+    link_destination_structure,
     inline_link_dest_strict_pandoc,
     inline_code,
     inline_code_attributes_lossless,

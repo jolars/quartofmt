@@ -12,7 +12,8 @@ DOCUMENT@0..293
       IMAGE_ALT_END@25..26 "]"
       IMAGE_DEST_START@26..27 "("
       LINK_DEST@27..34
-        TEXT@27..34 "img.jpg"
+        LINK_DEST_URL@27..34
+          TEXT@27..34 "img.jpg"
       IMAGE_DEST_END@34..35 ")"
     NEWLINE@35..36 "\n"
   BLANK_LINE@36..37
@@ -26,7 +27,8 @@ DOCUMENT@0..293
       IMAGE_ALT_END@66..67 "]"
       IMAGE_DEST_START@67..68 "("
       LINK_DEST@68..75
-        TEXT@68..75 "img.jpg"
+        LINK_DEST_URL@68..75
+          TEXT@68..75 "img.jpg"
       IMAGE_DEST_END@75..76 ")"
     NEWLINE@76..77 "\n"
     TEXT@77..91 "trailing prose"
@@ -44,7 +46,8 @@ DOCUMENT@0..293
       IMAGE_ALT_END@135..136 "]"
       IMAGE_DEST_START@136..137 "("
       LINK_DEST@137..144
-        TEXT@137..144 "img.jpg"
+        LINK_DEST_URL@137..144
+          TEXT@137..144 "img.jpg"
       IMAGE_DEST_END@144..145 ")"
     NEWLINE@145..146 "\n"
   BLANK_LINE@146..147
@@ -58,7 +61,8 @@ DOCUMENT@0..293
       IMAGE_ALT_END@176..177 "]"
       IMAGE_DEST_START@177..178 "("
       LINK_DEST@178..185
-        TEXT@178..185 "img.jpg"
+        LINK_DEST_URL@178..185
+          TEXT@178..185 "img.jpg"
       IMAGE_DEST_END@185..186 ")"
     TEXT@186..195 " and more"
     NEWLINE@195..196 "\n"
@@ -76,7 +80,8 @@ DOCUMENT@0..293
         IMAGE_ALT_END@221..222 "]"
         IMAGE_DEST_START@222..223 "("
         LINK_DEST@223..230
-          TEXT@223..230 "img.jpg"
+          LINK_DEST_URL@223..230
+            TEXT@223..230 "img.jpg"
         IMAGE_DEST_END@230..231 ")"
       NEWLINE@231..232 "\n"
   BLANK_LINE@232..233
@@ -93,7 +98,8 @@ DOCUMENT@0..293
         IMAGE_ALT_END@265..266 "]"
         IMAGE_DEST_START@266..267 "("
         LINK_DEST@267..274
-          TEXT@267..274 "img.jpg"
+          LINK_DEST_URL@267..274
+            TEXT@267..274 "img.jpg"
         IMAGE_DEST_END@274..275 ")"
       NEWLINE@275..276 "\n"
       LINE_PREFIX@276..277 ">"

@@ -1,6 +1,5 @@
 ---
 source: crates/panache-parser/tests/golden_parser_cases.rs
-assertion_line: 97
 expression: cst_output
 ---
 DOCUMENT@0..641
@@ -29,7 +28,8 @@ DOCUMENT@0..641
       LINK_TEXT_END@119..120 "]"
       LINK_DEST_START@120..121 "("
       LINK_DEST@121..152
-        TEXT@121..152 "http://example.com/?f ..."
+        LINK_DEST_URL@121..152
+          TEXT@121..152 "http://example.com/?f ..."
       LINK_DEST_END@152..153 ")"
     TEXT@153..154 "."
     NEWLINE@154..155 "\n"
@@ -45,7 +45,13 @@ DOCUMENT@0..641
       LINK_TEXT_END@210..211 "]"
       LINK_DEST_START@211..212 "("
       LINK_DEST@212..234
-        TEXT@212..234 "http://att.com/ \"AT&T\""
+        LINK_DEST_URL@212..227
+          TEXT@212..227 "http://att.com/"
+        TEXT@227..228 " "
+        LINK_DEST_TITLE@228..234
+          LINK_DEST_TITLE_MARKER@228..229 "\""
+          TEXT@229..233 "AT&T"
+          LINK_DEST_TITLE_MARKER@233..234 "\""
       LINK_DEST_END@234..235 ")"
     TEXT@235..236 "."
     NEWLINE@236..237 "\n"
@@ -61,7 +67,8 @@ DOCUMENT@0..641
       LINK_TEXT_END@260..261 "]"
       LINK_DEST_START@261..262 "("
       LINK_DEST@262..281
-        TEXT@262..281 "/script?foo=1&bar=2"
+        LINK_DEST_URL@262..281
+          TEXT@262..281 "/script?foo=1&bar=2"
       LINK_DEST_END@281..282 ")"
     TEXT@282..283 "."
     NEWLINE@283..284 "\n"
@@ -77,7 +84,8 @@ DOCUMENT@0..641
       LINK_TEXT_END@324..325 "]"
       LINK_DEST_START@325..326 "("
       LINK_DEST@326..345
-        TEXT@326..345 "/script?foo=1&bar=2"
+        LINK_DEST_URL@326..345
+          TEXT@326..345 "/script?foo=1&bar=2"
       LINK_DEST_END@345..346 ")"
     TEXT@346..347 "."
     NEWLINE@347..348 "\n"

@@ -70,7 +70,8 @@ DOCUMENT@0..632
       LINK_TEXT_END@281..282 "]"
       LINK_DEST_START@282..283 "("
       LINK_DEST@283..289
-        TEXT@283..289 "#fig-1"
+        LINK_DEST_URL@283..289
+          TEXT@283..289 "#fig-1"
       LINK_DEST_END@289..290 ")"
     TEXT@290..298 " follow."
     NEWLINE@298..299 "\n"
@@ -86,7 +87,8 @@ DOCUMENT@0..632
       LINK_TEXT_END@329..330 "]"
       LINK_DEST_START@330..331 "("
       LINK_DEST@331..331
-        TEXT@331..331 ""
+        LINK_DEST_URL@331..331
+          TEXT@331..331 ""
       LINK_DEST_END@331..332 ")"
     TEXT@332..350 " and unterminated^"
     UNRESOLVED_REFERENCE@350..362
@@ -119,7 +121,8 @@ DOCUMENT@0..632
       LINK_TEXT_END@442..443 "]"
       LINK_DEST_START@443..444 "("
       LINK_DEST@444..450
-        TEXT@444..450 "#fig-1"
+        LINK_DEST_URL@444..450
+          TEXT@444..450 "#fig-1"
       LINK_DEST_END@450..451 ")"
     TEXT@451..459 " follow."
     NEWLINE@459..460 "\n"

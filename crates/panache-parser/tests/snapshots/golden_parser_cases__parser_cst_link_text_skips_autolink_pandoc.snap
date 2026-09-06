@@ -12,7 +12,8 @@ DOCUMENT@0..96
       LINK_TEXT_END@33..34 "]"
       LINK_DEST_START@34..35 "("
       LINK_DEST@35..38
-        TEXT@35..38 "uri"
+        LINK_DEST_URL@35..38
+          TEXT@35..38 "uri"
       LINK_DEST_END@38..39 ")"
     TEXT@39..40 ">"
     NEWLINE@40..41 "\n"

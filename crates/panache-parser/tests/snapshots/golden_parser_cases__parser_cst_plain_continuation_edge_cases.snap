@@ -175,7 +175,8 @@ DOCUMENT@0..1248
             LINK_TEXT_END@643..644 "]"
             LINK_DEST_START@644..645 "("
             LINK_DEST@645..663
-              TEXT@645..663 "http://example.com"
+              LINK_DEST_URL@645..663
+                TEXT@645..663 "http://example.com"
             LINK_DEST_END@663..664 ")"
           TEXT@664..670 " here."
           NEWLINE@670..671 "\n"

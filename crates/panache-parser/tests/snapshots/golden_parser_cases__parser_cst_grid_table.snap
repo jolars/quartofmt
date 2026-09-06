@@ -360,7 +360,8 @@ DOCUMENT@0..1852
           LINK_TEXT_END@1603..1604 "]"
           LINK_DEST_START@1604..1605 "("
           LINK_DEST@1605..1661
-            TEXT@1605..1661 "https://developer.moz ..."
+            LINK_DEST_URL@1605..1661
+              TEXT@1605..1661 "https://developer.moz ..."
           LINK_DEST_END@1661..1662 ")"
         TEXT@1662..1675 " conventions."
       TEXT@1675..1676 "|"

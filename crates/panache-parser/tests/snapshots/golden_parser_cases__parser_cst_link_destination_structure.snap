@@ -1,0 +1,72 @@
+---
+source: crates/panache-parser/tests/golden_parser_cases.rs
+expression: cst_output
+---
+DOCUMENT@0..92
+  PARAGRAPH@0..25
+    LINK@0..24
+      LINK_START@0..1
+        LINK_START@0..1 "["
+      LINK_TEXT@1..4
+        TEXT@1..4 "top"
+      LINK_TEXT_END@4..5 "]"
+      LINK_DEST_START@5..6 "("
+      LINK_DEST@6..23
+        LINK_DEST_URL@6..11
+          LINK_DEST_URL_MARKER@6..7 "<"
+          TEXT@7..10 "a b"
+          LINK_DEST_URL_MARKER@10..11 ">"
+        TEXT@11..12 " "
+        LINK_DEST_TITLE@12..23
+          LINK_DEST_TITLE_MARKER@12..13 "\""
+          TEXT@13..22 "Top title"
+          LINK_DEST_TITLE_MARKER@22..23 "\""
+      LINK_DEST_END@23..24 ")"
+    NEWLINE@24..25 "\n"
+  BLANK_LINE@25..26
+    BLANK_LINE@25..26 "\n"
+  LIST@26..57
+    LIST_ITEM@26..57
+      LIST_MARKER@26..27 "-"
+      WHITESPACE@27..28 " "
+      PLAIN@28..57
+        LINK@28..56
+          LINK_START@28..29
+            LINK_START@28..29 "["
+          LINK_TEXT@29..33
+            TEXT@29..33 "list"
+          LINK_TEXT_END@33..34 "]"
+          LINK_DEST_START@34..35 "("
+          LINK_DEST@35..55
+            LINK_DEST_URL@35..42
+              TEXT@35..42 "list.md"
+            TEXT@42..43 " "
+            LINK_DEST_TITLE@43..55
+              LINK_DEST_TITLE_MARKER@43..44 "'"
+              TEXT@44..54 "List title"
+              LINK_DEST_TITLE_MARKER@54..55 "'"
+          LINK_DEST_END@55..56 ")"
+        NEWLINE@56..57 "\n"
+  BLANK_LINE@57..58
+    BLANK_LINE@57..58 "\n"
+  BLOCK_QUOTE@58..92
+    BLOCK_QUOTE_MARKER@58..59 ">"
+    WHITESPACE@59..60 " "
+    PARAGRAPH@60..92
+      LINK@60..91
+        LINK_START@60..61
+          LINK_START@60..61 "["
+        LINK_TEXT@61..66
+          TEXT@61..66 "quote"
+        LINK_TEXT_END@66..67 "]"
+        LINK_DEST_START@67..68 "("
+        LINK_DEST@68..90
+          LINK_DEST_URL@68..76
+            TEXT@68..76 "quote.md"
+          TEXT@76..77 " "
+          LINK_DEST_TITLE@77..90
+            LINK_DEST_TITLE_MARKER@77..78 "("
+            TEXT@78..89 "Quote title"
+            LINK_DEST_TITLE_MARKER@89..90 ")"
+        LINK_DEST_END@90..91 ")"
+      NEWLINE@91..92 "\n"

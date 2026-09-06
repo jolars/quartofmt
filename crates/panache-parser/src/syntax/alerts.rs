@@ -3,6 +3,15 @@
 use super::ast::support;
 use super::{AstChildren, AstNode, PanacheLanguage, Paragraph, SyntaxKind, SyntaxNode};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlertKind {
+    Note,
+    Tip,
+    Important,
+    Warning,
+    Caution,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Alert(SyntaxNode);
 
@@ -33,6 +42,21 @@ impl Alert {
 
     pub fn paragraphs(&self) -> AstChildren<Paragraph> {
         support::children(&self.0)
+    }
+
+    pub fn kind(&self) -> Option<AlertKind> {
+        match self
+            .marker()?
+            .trim_matches(['[', ']'])
+            .trim_start_matches('!')
+        {
+            "NOTE" => Some(AlertKind::Note),
+            "TIP" => Some(AlertKind::Tip),
+            "IMPORTANT" => Some(AlertKind::Important),
+            "WARNING" => Some(AlertKind::Warning),
+            "CAUTION" => Some(AlertKind::Caution),
+            _ => None,
+        }
     }
 }
 

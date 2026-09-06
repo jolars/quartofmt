@@ -310,6 +310,7 @@ impl Config {
             dialect: self.dialect(),
             extensions: self.parser_extensions.clone(),
             pandoc_compat: self.parser,
+            preserve_unresolved_references: false,
             crossref_prefixes: Vec::new(),
             refdef_labels: None,
         }

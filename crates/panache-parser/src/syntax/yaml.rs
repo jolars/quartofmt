@@ -72,6 +72,22 @@ impl AstNode for YamlMetadata {
     }
 }
 
+impl YamlMetadata {
+    pub fn content_node(&self) -> Option<SyntaxNode> {
+        self.0
+            .children()
+            .find(|node| node.kind() == SyntaxKind::YAML_METADATA_CONTENT)
+    }
+
+    pub fn document(&self) -> Option<YamlDocument> {
+        self.content_node()?.children().find_map(YamlDocument::cast)
+    }
+
+    pub fn content_range(&self) -> Option<rowan::TextRange> {
+        self.content_node().map(|node| node.text_range())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HashpipeYamlPreamble(SyntaxNode);
 
@@ -88,6 +104,22 @@ impl AstNode for HashpipeYamlPreamble {
 
     fn syntax(&self) -> &SyntaxNode {
         &self.0
+    }
+}
+
+impl HashpipeYamlPreamble {
+    pub fn content_node(&self) -> Option<SyntaxNode> {
+        self.0
+            .children()
+            .find(|node| node.kind() == SyntaxKind::HASHPIPE_YAML_CONTENT)
+    }
+
+    pub fn document(&self) -> Option<YamlDocument> {
+        self.content_node()?.children().find_map(YamlDocument::cast)
+    }
+
+    pub fn content_range(&self) -> Option<rowan::TextRange> {
+        self.content_node().map(|node| node.text_range())
     }
 }
 

@@ -314,6 +314,13 @@ pub enum SyntaxKind {
     EMOJI, // :alias:
 
     UNRESOLVED_REFERENCE,
+
+    // Structured children of LINK_DEST. Appended to preserve existing raw
+    // discriminants used by incremental parse fingerprints.
+    LINK_DEST_URL,
+    LINK_DEST_TITLE,
+    LINK_DEST_URL_MARKER,
+    LINK_DEST_TITLE_MARKER,
 }
 
 impl From<SyntaxKind> for rowan::SyntaxKind {

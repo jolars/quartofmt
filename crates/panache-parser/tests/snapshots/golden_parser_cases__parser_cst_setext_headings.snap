@@ -98,7 +98,8 @@ DOCUMENT@0..706
         LINK_TEXT_END@319..320 "]"
         LINK_DEST_START@320..321 "("
         LINK_DEST@321..340
-          TEXT@321..340 "https://example.com"
+          LINK_DEST_URL@321..340
+            TEXT@321..340 "https://example.com"
         LINK_DEST_END@340..341 ")"
     NEWLINE@341..342 "\n"
     SETEXT_HEADING_UNDERLINE@342..383

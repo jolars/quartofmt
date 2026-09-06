@@ -1,6 +1,15 @@
 //! Fenced div AST node wrappers.
 
-use super::{AstNode, PanacheLanguage, SyntaxKind, SyntaxNode};
+use super::{AstNode, AttributeNode, PanacheLanguage, SyntaxKind, SyntaxNode};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CalloutKind {
+    Note,
+    Tip,
+    Important,
+    Warning,
+    Caution,
+}
 
 pub struct FencedDiv(SyntaxNode);
 
@@ -52,6 +61,52 @@ impl FencedDiv {
 
     pub fn has_closing_fence(&self) -> bool {
         self.closing_fence().is_some()
+    }
+
+    pub fn attributes(&self) -> Option<AttributeNode> {
+        self.info().and_then(|info| AttributeNode::cast(info.0))
+    }
+
+    pub fn quarto_callout(&self) -> Option<QuartoCallout> {
+        let attributes = self.attributes()?;
+        let kind = attributes
+            .classes()
+            .into_iter()
+            .find_map(|class| match class.as_str() {
+                "callout-note" => Some(CalloutKind::Note),
+                "callout-tip" => Some(CalloutKind::Tip),
+                "callout-important" => Some(CalloutKind::Important),
+                "callout-warning" => Some(CalloutKind::Warning),
+                "callout-caution" => Some(CalloutKind::Caution),
+                _ => None,
+            })?;
+        Some(QuartoCallout {
+            div: FencedDiv::cast(self.0.clone()).expect("cloned fenced div"),
+            kind,
+        })
+    }
+}
+
+pub struct QuartoCallout {
+    div: FencedDiv,
+    kind: CalloutKind,
+}
+
+impl QuartoCallout {
+    pub fn kind(&self) -> CalloutKind {
+        self.kind
+    }
+
+    pub fn syntax(&self) -> &SyntaxNode {
+        self.div.syntax()
+    }
+
+    pub fn attributes(&self) -> Option<AttributeNode> {
+        self.div.attributes()
+    }
+
+    pub fn fenced_div(&self) -> &FencedDiv {
+        &self.div
     }
 }
 

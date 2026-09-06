@@ -12,6 +12,12 @@ DOCUMENT@0..21
       IMAGE_ALT_END@5..6 "]"
       IMAGE_DEST_START@6..7 "("
       LINK_DEST@7..19
-        TEXT@7..19 "/url \"title\""
+        LINK_DEST_URL@7..11
+          TEXT@7..11 "/url"
+        TEXT@11..12 " "
+        LINK_DEST_TITLE@12..19
+          LINK_DEST_TITLE_MARKER@12..13 "\""
+          TEXT@13..18 "title"
+          LINK_DEST_TITLE_MARKER@18..19 "\""
       IMAGE_DEST_END@19..20 ")"
     NEWLINE@20..21 "\n"

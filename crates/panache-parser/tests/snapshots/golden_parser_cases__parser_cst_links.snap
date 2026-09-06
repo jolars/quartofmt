@@ -18,7 +18,8 @@ DOCUMENT@0..483
       LINK_TEXT_END@76..77 "]"
       LINK_DEST_START@77..78 "("
       LINK_DEST@78..102
-        TEXT@78..102 "../images/networkfig.png"
+        LINK_DEST_URL@78..102
+          TEXT@78..102 "../images/networkfig.png"
       LINK_DEST_END@102..103 ")"
       ATTRIBUTE@103..114
         TEXT@103..104 "{"
@@ -41,7 +42,8 @@ DOCUMENT@0..483
       LINK_TEXT_END@134..135 "]"
       LINK_DEST_START@135..136 "("
       LINK_DEST@136..141
-        TEXT@136..141 "/url/"
+        LINK_DEST_URL@136..141
+          TEXT@136..141 "/url/"
       LINK_DEST_END@141..142 ")"
     TEXT@142..143 "."
     NEWLINE@143..144 "\n"
@@ -56,7 +58,13 @@ DOCUMENT@0..483
       LINK_TEXT_END@159..160 "]"
       LINK_DEST_START@160..161 "("
       LINK_DEST@161..174
-        TEXT@161..174 "/url/ \"title\""
+        LINK_DEST_URL@161..166
+          TEXT@161..166 "/url/"
+        TEXT@166..167 " "
+        LINK_DEST_TITLE@167..174
+          LINK_DEST_TITLE_MARKER@167..168 "\""
+          TEXT@168..173 "title"
+          LINK_DEST_TITLE_MARKER@173..174 "\""
       LINK_DEST_END@174..175 ")"
     TEXT@175..176 "."
     NEWLINE@176..177 "\n"
@@ -71,7 +79,13 @@ DOCUMENT@0..483
       LINK_TEXT_END@192..193 "]"
       LINK_DEST_START@193..194 "("
       LINK_DEST@194..231
-        TEXT@194..231 "/url/  \"title precede ..."
+        LINK_DEST_URL@194..199
+          TEXT@194..199 "/url/"
+        TEXT@199..201 "  "
+        LINK_DEST_TITLE@201..231
+          LINK_DEST_TITLE_MARKER@201..202 "\""
+          TEXT@202..230 "title preceded by two ..."
+          LINK_DEST_TITLE_MARKER@230..231 "\""
       LINK_DEST_END@231..232 ")"
     TEXT@232..233 "."
     NEWLINE@233..234 "\n"
@@ -86,7 +100,13 @@ DOCUMENT@0..483
       LINK_TEXT_END@249..250 "]"
       LINK_DEST_START@250..251 "("
       LINK_DEST@251..282
-        TEXT@251..282 "/url/\t\"title preceded ..."
+        LINK_DEST_URL@251..256
+          TEXT@251..256 "/url/"
+        TEXT@256..257 "\t"
+        LINK_DEST_TITLE@257..282
+          LINK_DEST_TITLE_MARKER@257..258 "\""
+          TEXT@258..281 "title preceded by a tab"
+          LINK_DEST_TITLE_MARKER@281..282 "\""
       LINK_DEST_END@282..283 ")"
     TEXT@283..284 "."
     NEWLINE@284..285 "\n"
@@ -101,7 +121,13 @@ DOCUMENT@0..483
       LINK_TEXT_END@300..301 "]"
       LINK_DEST_START@301..302 "("
       LINK_DEST@302..335
-        TEXT@302..335 "/url/ \"title with \"qu ..."
+        LINK_DEST_URL@302..307
+          TEXT@302..307 "/url/"
+        TEXT@307..308 " "
+        LINK_DEST_TITLE@308..335
+          LINK_DEST_TITLE_MARKER@308..309 "\""
+          TEXT@309..334 "title with \"quotes\" i ..."
+          LINK_DEST_TITLE_MARKER@334..335 "\""
       LINK_DEST_END@335..336 ")"
     NEWLINE@336..337 "\n"
   BLANK_LINE@337..338
@@ -115,7 +141,13 @@ DOCUMENT@0..483
       LINK_TEXT_END@352..353 "]"
       LINK_DEST_START@353..354 "("
       LINK_DEST@354..386
-        TEXT@354..386 "/url/ 'title with sin ..."
+        LINK_DEST_URL@354..359
+          TEXT@354..359 "/url/"
+        TEXT@359..360 " "
+        LINK_DEST_TITLE@360..386
+          LINK_DEST_TITLE_MARKER@360..361 "'"
+          TEXT@361..385 "title with single quotes"
+          LINK_DEST_TITLE_MARKER@385..386 "'"
       LINK_DEST_END@386..387 ")"
     NEWLINE@387..388 "\n"
   BLANK_LINE@388..389
@@ -131,7 +163,8 @@ DOCUMENT@0..483
       LINK_TEXT_END@406..407 "]"
       LINK_DEST_START@407..408 "("
       LINK_DEST@408..428
-        TEXT@408..428 "/url/with_underscore"
+        LINK_DEST_URL@408..428
+          TEXT@408..428 "/url/with_underscore"
       LINK_DEST_END@428..429 ")"
     NEWLINE@429..430 "\n"
   BLANK_LINE@430..431
@@ -145,7 +178,8 @@ DOCUMENT@0..483
       LINK_TEXT_END@442..443 "]"
       LINK_DEST_START@443..444 "("
       LINK_DEST@444..469
-        TEXT@444..469 "mailto:nobody@nowhere ..."
+        LINK_DEST_URL@444..469
+          TEXT@444..469 "mailto:nobody@nowhere ..."
       LINK_DEST_END@469..470 ")"
     NEWLINE@470..471 "\n"
   BLANK_LINE@471..472
@@ -159,7 +193,8 @@ DOCUMENT@0..483
       LINK_TEXT_END@478..479 "]"
       LINK_DEST_START@479..480 "("
       LINK_DEST@480..480
-        TEXT@480..480 ""
+        LINK_DEST_URL@480..480
+          TEXT@480..480 ""
       LINK_DEST_END@480..481 ")"
     TEXT@481..482 "."
     NEWLINE@482..483 "\n"

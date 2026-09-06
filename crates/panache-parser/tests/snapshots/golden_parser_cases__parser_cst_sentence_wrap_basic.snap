@@ -13,7 +13,8 @@ DOCUMENT@0..235
       LINK_TEXT_END@32..33 "]"
       LINK_DEST_START@33..34 "("
       LINK_DEST@34..53
-        TEXT@34..53 "https://example.com"
+        LINK_DEST_URL@34..53
+          TEXT@34..53 "https://example.com"
       LINK_DEST_END@53..54 ")"
     TEXT@54..71 " and inline math "
     INLINE_MATH@71..82
@@ -48,7 +49,8 @@ DOCUMENT@0..235
       LINK_TEXT_END@150..151 "]"
       LINK_DEST_START@151..152 "("
       LINK_DEST@152..171
-        TEXT@152..171 "https://example.com"
+        LINK_DEST_URL@152..171
+          TEXT@152..171 "https://example.com"
       LINK_DEST_END@171..172 ")"
     TEXT@172..188 " and inline math"
     NEWLINE@188..189 "\n"

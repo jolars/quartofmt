@@ -1,9 +1,11 @@
 //! Code block and chunk AST node wrappers.
 
+use std::collections::BTreeMap;
+
 use super::{
     AstNode, ChunkInfoItem, ChunkLabel, ChunkLabelEntry, ChunkLabelSource, ChunkOption,
     ChunkOptionEntry, ChunkOptionSource, ChunkOptions, HashpipeYamlPreamble, PanacheLanguage,
-    SyntaxKind, SyntaxNode, YamlDocument, YamlScalarStyle,
+    SyntaxKind, SyntaxNode, TextRange, TextSize, YamlDocument, YamlNode, YamlScalarStyle,
 };
 
 pub struct CodeBlock(SyntaxNode);
@@ -52,6 +54,48 @@ impl CodeBlock {
             .children()
             .find(|child| child.kind() == SyntaxKind::CODE_CONTENT)
             .map(|child| child.text_range())
+    }
+
+    /// Source segments belonging to code rather than container framing or a
+    /// hashpipe YAML preamble. Concatenating their text yields executable code;
+    /// each segment retains its exact host-document range.
+    pub fn code_source_segments(&self) -> Vec<CodeSourceSegment> {
+        let Some(content) = self
+            .0
+            .children()
+            .find(|child| child.kind() == SyntaxKind::CODE_CONTENT)
+        else {
+            return Vec::new();
+        };
+
+        content
+            .descendants_with_tokens()
+            .filter_map(|element| element.into_token())
+            .filter(|token| token.kind() != SyntaxKind::LINE_PREFIX)
+            .filter(|token| {
+                !token
+                    .parent()
+                    .into_iter()
+                    .flat_map(|parent| parent.ancestors())
+                    .any(|ancestor| ancestor.kind() == SyntaxKind::HASHPIPE_YAML_PREAMBLE)
+            })
+            .map(|token| CodeSourceSegment {
+                text: token.text().to_string(),
+                range: token.text_range(),
+            })
+            .collect()
+    }
+
+    pub fn code_source(&self) -> String {
+        self.code_source_segments()
+            .into_iter()
+            .map(|segment| segment.text)
+            .collect()
+    }
+
+    pub fn executable_cell(&self) -> Option<ExecutableCell> {
+        self.is_executable_chunk()
+            .then(|| ExecutableCell(CodeBlock::cast(self.0.clone()).expect("cloned code block")))
     }
 
     pub fn is_executable_chunk(&self) -> bool {
@@ -214,6 +258,305 @@ impl CodeBlock {
     pub fn has_chunk_label(&self) -> bool {
         !self.chunk_labels().is_empty()
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CodeSourceSegment {
+    text: String,
+    range: TextRange,
+}
+
+impl CodeSourceSegment {
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn text_range(&self) -> TextRange {
+        self.range
+    }
+}
+
+/// Consumer-facing view of a Quarto/R Markdown executable fenced cell.
+pub struct ExecutableCell(CodeBlock);
+
+impl ExecutableCell {
+    pub fn syntax(&self) -> &SyntaxNode {
+        self.0.syntax()
+    }
+
+    pub fn language(&self) -> Option<String> {
+        self.0.language()
+    }
+
+    pub fn text_range(&self) -> TextRange {
+        self.0.syntax().text_range()
+    }
+
+    pub fn code_source_segments(&self) -> Vec<CodeSourceSegment> {
+        self.0.code_source_segments()
+    }
+
+    pub fn code_source(&self) -> String {
+        self.0.code_source()
+    }
+
+    pub fn code_range(&self) -> Option<TextRange> {
+        let segments = self.code_source_segments();
+        let first = segments.first()?.text_range();
+        let last = segments.last()?.text_range();
+        Some(TextRange::new(first.start(), last.end()))
+    }
+
+    pub fn identifier(&self) -> Option<(String, TextRange)> {
+        self.0.info()?.chunk_items().find_map(|item| match item {
+            ChunkInfoItem::Id(id) => Some(marker_payload(id.text(), id.range(), '#')),
+            _ => None,
+        })
+    }
+
+    pub fn classes(&self) -> Vec<(String, TextRange)> {
+        self.0
+            .info()
+            .map(|info| {
+                info.chunk_items()
+                    .filter_map(|item| match item {
+                        ChunkInfoItem::Class(class) => {
+                            Some(marker_payload(class.text(), class.range(), '.'))
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn labels(&self) -> Vec<ChunkLabelEntry> {
+        let mut labels = Vec::new();
+        if let Some(info) = self.0.info() {
+            for label in info.chunk_labels() {
+                let range = label.range();
+                labels.push(ChunkLabelEntry::new(
+                    label.text(),
+                    range,
+                    range,
+                    ChunkLabelSource::InlineLabel,
+                ));
+            }
+        }
+        for option in self.option_declarations() {
+            if option
+                .key()
+                .is_some_and(|key| key.eq_ignore_ascii_case("label"))
+                && let Some(value) = option.cooked_value()
+                && !value.is_empty()
+            {
+                labels.push(ChunkLabelEntry::new(
+                    value.to_string(),
+                    option.declaration_range(),
+                    option
+                        .value_range()
+                        .unwrap_or_else(|| option.declaration_range()),
+                    ChunkLabelSource::LabelOption,
+                ));
+            }
+        }
+        labels
+    }
+
+    pub fn option_declarations(&self) -> Vec<CellOptionDeclaration> {
+        let mut declarations = self
+            .0
+            .inline_chunk_option_entries()
+            .into_iter()
+            .map(CellOptionDeclaration::from_inline)
+            .collect::<Vec<_>>();
+
+        if let Some(map) = self
+            .0
+            .hashpipe_yaml_preamble()
+            .and_then(|preamble| preamble.document())
+            .and_then(|document| document.block_map())
+        {
+            declarations.extend(map.entries().map(CellOptionDeclaration::from_hashpipe));
+        }
+        declarations.sort_by_key(|declaration| declaration.declaration_range().start());
+        declarations
+    }
+
+    pub fn resolved_options(&self) -> Vec<ResolvedCellOption> {
+        let mut grouped: BTreeMap<String, Vec<CellOptionDeclaration>> = BTreeMap::new();
+        for declaration in self.option_declarations() {
+            if let Some(key) = declaration.canonical_key() {
+                grouped.entry(key).or_default().push(declaration);
+            }
+        }
+
+        grouped
+            .into_iter()
+            .map(|(key, declarations)| {
+                let winning_source = if declarations
+                    .iter()
+                    .any(|entry| entry.source() == ChunkOptionSource::InlineInfo)
+                {
+                    ChunkOptionSource::InlineInfo
+                } else {
+                    ChunkOptionSource::HashpipeYaml
+                };
+                let winners = declarations
+                    .into_iter()
+                    .filter(|entry| entry.source() == winning_source)
+                    .collect::<Vec<_>>();
+                let resolution = if winners.len() == 1 {
+                    CellOptionResolution::Resolved(winners.into_iter().next().expect("one winner"))
+                } else {
+                    CellOptionResolution::Ambiguous(winners)
+                };
+                ResolvedCellOption { key, resolution }
+            })
+            .collect()
+    }
+}
+
+fn marker_payload(text: String, range: TextRange, marker: char) -> (String, TextRange) {
+    let marker_len = if text.starts_with(marker) {
+        marker.len_utf8()
+    } else {
+        0
+    };
+    (
+        text[marker_len..].to_string(),
+        TextRange::new(
+            range.start() + TextSize::from(marker_len as u32),
+            range.end(),
+        ),
+    )
+}
+
+#[derive(Debug, Clone)]
+pub struct CellOptionDeclaration {
+    key: Option<String>,
+    raw_value: Option<String>,
+    cooked_value: Option<String>,
+    yaml_value: Option<YamlNode>,
+    key_range: Option<TextRange>,
+    value_range: Option<TextRange>,
+    declaration_range: TextRange,
+    source: ChunkOptionSource,
+    is_quoted: bool,
+}
+
+impl CellOptionDeclaration {
+    fn from_inline(entry: ChunkOptionEntry) -> Self {
+        Self {
+            key: entry.key(),
+            raw_value: entry.value(),
+            cooked_value: entry.value(),
+            yaml_value: None,
+            key_range: entry.key_range(),
+            value_range: entry.value_range(),
+            declaration_range: entry.declaration_range(),
+            source: entry.source(),
+            is_quoted: entry.is_quoted(),
+        }
+    }
+
+    fn from_hashpipe(entry: super::YamlBlockMapEntry) -> Self {
+        let key_scalar = entry.key().and_then(|key| key.scalar());
+        let value = entry.value();
+        let yaml_value = value.as_ref().and_then(|value| value.as_node());
+        let raw_value = yaml_value
+            .as_ref()
+            .map(|value| value.syntax().text().to_string());
+        let cooked_value = yaml_value.as_ref().and_then(|value| match value {
+            YamlNode::Scalar(scalar) => Some(scalar.value()),
+            _ => None,
+        });
+        let is_quoted = yaml_value.as_ref().is_some_and(|value| {
+            matches!(
+                value,
+                YamlNode::Scalar(scalar)
+                    if matches!(
+                        scalar.style(),
+                        YamlScalarStyle::SingleQuoted | YamlScalarStyle::DoubleQuoted
+                    )
+            )
+        });
+        Self {
+            key: entry.key_text(),
+            raw_value,
+            cooked_value,
+            key_range: key_scalar.map(|scalar| scalar.text_range()),
+            value_range: yaml_value.as_ref().map(YamlNode::text_range),
+            yaml_value,
+            declaration_range: entry.syntax().text_range(),
+            source: ChunkOptionSource::HashpipeYaml,
+            is_quoted,
+        }
+    }
+
+    pub fn source(&self) -> ChunkOptionSource {
+        self.source
+    }
+
+    pub fn key(&self) -> Option<&str> {
+        self.key.as_deref()
+    }
+
+    pub fn canonical_key(&self) -> Option<String> {
+        self.key()
+            .map(|key| key.trim().to_ascii_lowercase().replace('.', "-"))
+            .filter(|key| !key.is_empty())
+    }
+
+    pub fn raw_value(&self) -> Option<&str> {
+        self.raw_value.as_deref()
+    }
+
+    pub fn cooked_value(&self) -> Option<&str> {
+        self.cooked_value.as_deref()
+    }
+
+    pub fn yaml_value(&self) -> Option<&YamlNode> {
+        self.yaml_value.as_ref()
+    }
+
+    pub fn key_range(&self) -> Option<TextRange> {
+        self.key_range
+    }
+
+    pub fn value_range(&self) -> Option<TextRange> {
+        self.value_range
+    }
+
+    pub fn declaration_range(&self) -> TextRange {
+        self.declaration_range
+    }
+
+    pub fn is_quoted(&self) -> bool {
+        self.is_quoted
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedCellOption {
+    key: String,
+    resolution: CellOptionResolution,
+}
+
+impl ResolvedCellOption {
+    pub fn key(&self) -> &str {
+        &self.key
+    }
+
+    pub fn resolution(&self) -> &CellOptionResolution {
+        &self.resolution
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum CellOptionResolution {
+    Resolved(CellOptionDeclaration),
+    Ambiguous(Vec<CellOptionDeclaration>),
 }
 
 pub struct CodeInfo(SyntaxNode);

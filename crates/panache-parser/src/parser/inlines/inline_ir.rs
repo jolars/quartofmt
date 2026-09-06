@@ -1625,6 +1625,7 @@ pub fn process_brackets(
     text: &str,
     refdefs: Option<&RefdefMap>,
     dialect: crate::options::Dialect,
+    preserve_unresolved_references: bool,
     allow_spaced: bool,
 ) {
     let empty: HashSet<String> = HashSet::new();
@@ -1751,7 +1752,7 @@ pub fn process_brackets(
             continue;
         }
 
-        let unresolved_shape = if !is_commonmark {
+        let unresolved_shape = if !is_commonmark || preserve_unresolved_references {
             let (end, has_substantive_label) =
                 if let Some((suffix_end, label_raw)) = &full_ref_suffix {
                     (*suffix_end, !normalize_label(label_raw).is_empty())
@@ -2343,6 +2344,7 @@ pub fn build_full_plans(
         text,
         config.refdef_labels.as_ref(),
         config.dialect,
+        config.preserve_unresolved_references,
         config.extensions.spaced_reference_links,
     );
 
@@ -2578,14 +2580,7 @@ mod tests {
 
     fn cm_opts() -> ParserOptions {
         let flavor = Flavor::CommonMark;
-        ParserOptions {
-            flavor,
-            dialect: crate::options::Dialect::for_flavor(flavor),
-            extensions: crate::options::Extensions::for_flavor(flavor),
-            pandoc_compat: crate::options::PandocCompat::default(),
-            crossref_prefixes: Vec::new(),
-            refdef_labels: None,
-        }
+        ParserOptions::for_flavor(flavor)
     }
 
     fn refdefs<I: IntoIterator<Item = &'static str>>(labels: I) -> RefdefMap {
@@ -2716,7 +2711,7 @@ mod tests {
     fn brackets_resolve_inline_link() {
         let opts = cm_opts();
         let mut ir = build_ir("[foo](/url)", 0, 11, &opts);
-        process_brackets(&mut ir, "[foo](/url)", None, opts.dialect, false);
+        process_brackets(&mut ir, "[foo](/url)", None, opts.dialect, false, false);
         let open = ir
             .iter()
             .find(|e| matches!(e, IrEvent::OpenBracket { start: 0, .. }))
@@ -2736,7 +2731,7 @@ mod tests {
         let text = "[foo]";
         let map = refdefs(["foo"]);
         let mut ir = build_ir(text, 0, text.len(), &opts);
-        process_brackets(&mut ir, text, Some(&map), opts.dialect, false);
+        process_brackets(&mut ir, text, Some(&map), opts.dialect, false, false);
         let open = ir
             .iter()
             .find(|e| matches!(e, IrEvent::OpenBracket { start: 0, .. }))
@@ -2754,7 +2749,7 @@ mod tests {
         let opts = cm_opts();
         let text = "[bar* baz]";
         let mut ir = build_ir(text, 0, text.len(), &opts);
-        process_brackets(&mut ir, text, None, opts.dialect, false);
+        process_brackets(&mut ir, text, None, opts.dialect, false, false);
         let open = ir
             .iter()
             .find(|e| matches!(e, IrEvent::OpenBracket { start: 0, .. }))
@@ -2785,14 +2780,7 @@ mod tests {
 
     fn pandoc_opts() -> ParserOptions {
         let flavor = Flavor::Pandoc;
-        ParserOptions {
-            flavor,
-            dialect: crate::options::Dialect::for_flavor(flavor),
-            extensions: crate::options::Extensions::for_flavor(flavor),
-            pandoc_compat: crate::options::PandocCompat::default(),
-            crossref_prefixes: Vec::new(),
-            refdef_labels: None,
-        }
+        ParserOptions::for_flavor(flavor)
     }
 
     #[test]

@@ -19,7 +19,8 @@ DOCUMENT@0..121
       LINK_TEXT_END@61..62 "]"
       LINK_DEST_START@62..63 "("
       LINK_DEST@63..72
-        TEXT@63..72 "#anchor-c"
+        LINK_DEST_URL@63..72
+          TEXT@63..72 "#anchor-c"
       LINK_DEST_END@72..73 ")"
     TEXT@73..74 "."
     NEWLINE@74..75 "\n"

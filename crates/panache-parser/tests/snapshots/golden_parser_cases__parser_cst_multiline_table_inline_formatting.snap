@@ -60,7 +60,8 @@ DOCUMENT@0..542
           LINK_TEXT_END@308..309 "]"
           LINK_DEST_START@309..310 "("
           LINK_DEST@310..313
-            TEXT@310..313 "url"
+            LINK_DEST_URL@310..313
+              TEXT@310..313 "url"
           LINK_DEST_END@313..314 ")"
       NEWLINE@314..315 "\n"
       TEXT@315..347 "            text      ..."

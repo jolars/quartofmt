@@ -89,7 +89,8 @@ DOCUMENT@0..263
       LINK_TEXT_END@221..222 "]"
       LINK_DEST_START@222..223 "("
       LINK_DEST@223..226
-        TEXT@223..226 "url"
+        LINK_DEST_URL@223..226
+          TEXT@223..226 "url"
       LINK_DEST_END@226..227 ")"
     TEXT@227..248 " on the same line as "
     WIKI_LINK@248..261

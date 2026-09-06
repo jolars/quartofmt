@@ -150,7 +150,8 @@ DOCUMENT@0..493
       LINK_TEXT_END@408..409 "]"
       LINK_DEST_START@409..410 "("
       LINK_DEST@410..435
-        TEXT@410..435 "./quarto-execute-info ..."
+        LINK_DEST_URL@410..435
+          TEXT@410..435 "./quarto-execute-info ..."
       LINK_DEST_END@435..436 ")"
     TEXT@436..437 "."
     NEWLINE@437..438 "\n"

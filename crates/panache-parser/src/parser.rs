@@ -5,7 +5,7 @@
 
 use crate::options::ParserOptions;
 use crate::parser::inlines::refdef_map::{RefdefMap, collect_refdef_labels};
-use crate::syntax::SyntaxNode;
+use crate::syntax::{AstNode, Document, SyntaxNode};
 
 pub mod blocks;
 pub mod diagnostics;
@@ -25,6 +25,27 @@ pub use reparse::{
     CostGuards, Edit, ReparseStrategy, Reparsed, diff_edit, reparse, reparse_with_cost_guards,
 };
 pub use verify::fingerprint;
+
+/// A typed document and the embedded-language errors found while parsing it.
+#[derive(Debug, Clone)]
+pub struct ParsedDocument {
+    document: Document,
+    errors: Vec<SyntaxError>,
+}
+
+impl ParsedDocument {
+    pub fn document(&self) -> &Document {
+        &self.document
+    }
+
+    pub fn errors(&self) -> &[SyntaxError] {
+        &self.errors
+    }
+
+    pub fn into_parts(self) -> (Document, Vec<SyntaxError>) {
+        (self.document, self.errors)
+    }
+}
 
 /// Parses a Quarto document string into a syntax tree.
 ///
@@ -51,6 +72,13 @@ pub use verify::fingerprint;
 /// * `config` - Optional configuration. If None, uses default config.
 pub fn parse(input: &str, config: Option<ParserOptions>) -> SyntaxNode {
     parse_with_errors(input, config).0
+}
+
+/// Parse into the typed downstream-consumer root while retaining errors.
+pub fn parse_document(input: &str, config: Option<ParserOptions>) -> ParsedDocument {
+    let (tree, errors) = parse_with_errors(input, config);
+    let document = Document::cast(tree).expect("the parser root is always a document");
+    ParsedDocument { document, errors }
 }
 
 /// Like [`parse`], but also returns the syntax errors the parser found in

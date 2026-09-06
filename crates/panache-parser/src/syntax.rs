@@ -13,6 +13,7 @@ pub mod chunk_options;
 pub mod citations;
 pub mod code_blocks;
 pub mod code_span;
+pub mod consumer;
 pub mod crossrefs;
 pub mod definitions;
 pub mod fenced_divs;
@@ -39,6 +40,7 @@ pub use chunk_options::*;
 pub use citations::*;
 pub use code_blocks::*;
 pub use code_span::*;
+pub use consumer::*;
 pub use crossrefs::*;
 pub use definitions::*;
 pub use fenced_divs::*;
@@ -59,6 +61,7 @@ pub use yaml_ast::*;
 pub type SyntaxNode = rowan::SyntaxNode<PanacheLanguage>;
 pub type SyntaxToken = rowan::SyntaxToken<PanacheLanguage>;
 pub type SyntaxElement = rowan::SyntaxElement<PanacheLanguage>;
+pub use rowan::{TextRange, TextSize};
 
 #[cfg(test)]
 mod tests {

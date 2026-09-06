@@ -45,7 +45,13 @@ DOCUMENT@0..491
       LINK_TEXT_END@95..96 "]"
       LINK_DEST_START@96..97 "("
       LINK_DEST@97..119
-        TEXT@97..119 "/bar/测?x=测 \"title\""
+        LINK_DEST_URL@97..111
+          TEXT@97..111 "/bar/测?x=测"
+        TEXT@111..112 " "
+        LINK_DEST_TITLE@112..119
+          LINK_DEST_TITLE_MARKER@112..113 "\""
+          TEXT@113..118 "title"
+          LINK_DEST_TITLE_MARKER@118..119 "\""
       LINK_DEST_END@119..120 ")"
     NEWLINE@120..121 "\n"
   BLANK_LINE@121..122

@@ -3,6 +3,14 @@
 use super::ast::{AstChildren, support};
 use super::{AstNode, PanacheLanguage, SyntaxKind, SyntaxNode, SyntaxToken};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TableAlignment {
+    Default,
+    Left,
+    Center,
+    Right,
+}
+
 /// `node`'s text with each line's container-prefix tokens skipped.
 ///
 /// A continuation line inside a block node carries the enclosing
@@ -131,12 +139,48 @@ impl PipeTable {
             .map(|sep| separator_column_segments(&sep).len())
     }
 
+    pub fn alignments(&self) -> Vec<TableAlignment> {
+        self.separator()
+            .map(|separator| {
+                separator_column_segments(&separator)
+                    .into_iter()
+                    .map(|segment| {
+                        let first = segment
+                            .iter()
+                            .find(|token| token.kind() != SyntaxKind::TABLE_SEP_WHITESPACE);
+                        let last = segment
+                            .iter()
+                            .rev()
+                            .find(|token| token.kind() != SyntaxKind::TABLE_SEP_WHITESPACE);
+                        match (
+                            first.is_some_and(|token| token.kind() == SyntaxKind::TABLE_SEP_COLON),
+                            last.is_some_and(|token| token.kind() == SyntaxKind::TABLE_SEP_COLON),
+                        ) {
+                            (true, true) => TableAlignment::Center,
+                            (true, false) => TableAlignment::Left,
+                            (false, true) => TableAlignment::Right,
+                            (false, false) => TableAlignment::Default,
+                        }
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     /// Every row that carries cells, header included. `TABLE_HEADER` is a
     /// distinct kind from `TABLE_ROW`, so [`Self::rows`] alone skips it.
     pub fn cell_rows(&self) -> impl Iterator<Item = SyntaxNode> {
-        self.0
-            .children()
-            .filter(|c| matches!(c.kind(), SyntaxKind::TABLE_HEADER | SyntaxKind::TABLE_ROW))
+        self.0.children().filter(|child| {
+            matches!(
+                child.kind(),
+                SyntaxKind::TABLE_HEADER | SyntaxKind::TABLE_ROW
+            )
+        })
+    }
+
+    /// Typed consumer rows, including the header and body.
+    pub fn all_rows(&self) -> impl Iterator<Item = TableRowNode> {
+        self.0.children().filter_map(TableRowNode::cast)
     }
 }
 
@@ -177,6 +221,13 @@ impl Table {
             Self::Simple(table) => table.caption(),
             Self::Multiline(table) => table.caption(),
         }
+    }
+
+    pub fn rows(&self) -> Vec<TableRowNode> {
+        self.syntax()
+            .children()
+            .filter_map(TableRowNode::cast)
+            .collect()
     }
 }
 
@@ -340,6 +391,35 @@ impl AstNode for TableRow {
 
 impl TableRow {
     /// Returns all cells in this row.
+    pub fn cells(&self) -> AstChildren<TableCell> {
+        support::children(&self.0)
+    }
+}
+
+/// Consumer row view that includes both a table header and body rows.
+pub struct TableRowNode(SyntaxNode);
+
+impl AstNode for TableRowNode {
+    type Language = PanacheLanguage;
+
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, SyntaxKind::TABLE_HEADER | SyntaxKind::TABLE_ROW)
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        Self::can_cast(syntax.kind()).then(|| Self(syntax))
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.0
+    }
+}
+
+impl TableRowNode {
+    pub fn is_header(&self) -> bool {
+        self.0.kind() == SyntaxKind::TABLE_HEADER
+    }
+
     pub fn cells(&self) -> AstChildren<TableCell> {
         support::children(&self.0)
     }
