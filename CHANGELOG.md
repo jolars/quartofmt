@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.10.0](https://github.com/jolars/panache/compare/v3.9.0...v3.10.0) (2026-09-09)
+
+### Features
+- **config:** group paths under flavors ([`2de3bd8`](https://github.com/jolars/panache/commit/2de3bd84802d0681d7d1a04c78be69345a15034c))
+- **linter:** warn on unspaced list markers ([`7ab22b5`](https://github.com/jolars/panache/commit/7ab22b5904f3f8684874845dad038a4851bf4797)), refs [#530](https://github.com/jolars/panache/issues/530)
+
+### Bug Fixes
+- **formatter:** wrap separate math expressions ([`d7685b7`](https://github.com/jolars/panache/commit/d7685b7ee0d18c554814c95462c689d7c793f53a))
+
+### Dependencies
+- updated crates/panache-formatter to v0.24.1
+
 ## [3.9.0](https://github.com/jolars/panache/compare/v3.8.0...v3.9.0) (2026-09-06)
 
 ### Features
