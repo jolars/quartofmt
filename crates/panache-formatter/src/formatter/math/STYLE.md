@@ -68,6 +68,9 @@ This line hygiene does not otherwise normalize or reflow the preserved content.
 - Panache retains an authored environment-row boundary after a standalone TeX
   control space. The pinned formatter moves the control space onto the next row;
   Panache keeps the semantic space at the physical line end.
+- Panache wraps independent equations at top-level punctuation. The pinned
+  formatter treats their relations as one chain and can strand the second
+  equation's left-hand side at the end of the preceding line.
 
 ## Rules
 
@@ -276,20 +279,31 @@ This line hygiene does not otherwise normalize or reflow the preserved content.
    `:`.
 
 7. **Display line-breaking.** In `reflow` mode, a free display row (`$$…$$`,
-   non-environment) wider than `line-width` is broken at its **top-level**
-   operators in a hierarchy keyed on parser `MathBreakPriority` (**relations** >
-   **binary** > everything else). It chooses a subset of those candidates
-   instead of breaking at every operator. The deterministic layout score charges
-   squared overflow more heavily than a continuation, prefers a later relation
-   break to a binary break, and prefers a binary break to separating the first
+   non-environment) wider than `line-width` is broken after **top-level**
+   punctuation, around `\qquad`, or before top-level operators. Operator
+   candidates follow parser `MathBreakPriority` (**relations** > **binary** >
+   everything else). It chooses a subset of those candidates instead of breaking
+   at every operator. The deterministic layout score charges squared overflow
+   more heavily than a continuation, prefers punctuation and later relation
+   breaks to binary breaks, and prefers a binary break to separating the first
    relation from its left-hand side. Ties favor the smaller maximum line width,
    then the smaller sum of squared line widths. This packs complete operator
    segments together when they fit instead of stranding `\pm`, `\cdot`, or a
    short relation on its own line.
 
+   Top-level punctuation, such as commas and semicolons, and `\qquad` separate
+   independent expressions. A selected break after punctuation starts at the
+   display indent and leaves the punctuation attached to the preceding
+   expression. When a break selects `\qquad`, the command occupies its own
+   source line at the display indent, followed by the next expression at that
+   same indent. Its width does not affect that expression's wrapping or relation
+   alignment. Expressions that fit together keep `\qquad` inline.
+
    A selected later relation starts a continuation aligned under the **first
-   relation**---the classic stacked-`=` layout for an equality/comparison chain.
-   A selected binary continuation sits **flush** under that relation segment's
+   relation in its expression**---the classic stacked-`=` layout for an
+   equality/comparison chain. The anchor is the relation's printed column; if
+   the first relation moves to a new line, later relations follow that column. A
+   selected binary continuation sits **flush** under that relation segment's
    right-hand side. The relation/RHS offset alone supplies the visual nesting;
    binary continuations never pick up an extra step. A top-level conditioning
    bar (`\mid`) identifies neighboring relations as separate predicates rather
@@ -334,12 +348,12 @@ This line hygiene does not otherwise normalize or reflow the preserved content.
    content, `line-width`, and `math-indent`---the author's own line breaks and
    indentation are never preserved, only recomputed.
 
-   - **Top-level only.** An operator at delimiter depth > 0 --- inside the flat
-     token runs `(…)` or `[…]` --- is never a break candidate. Structural
-     `MATH_DELIMITED` (`\left…\right`), `MATH_GROUP`, and `MATH_ENVIRONMENT`
-     nodes are opaque operands that the break scan never descends into, so their
-     interior operators are likewise excluded.
-   - **Spaced operators only.** A candidate has parser
+   - **Top-level only.** Punctuation or an operator at delimiter depth > 0 ---
+     inside the flat token runs `(…)` or `[…]` --- is never a break candidate.
+     Structural `MATH_DELIMITED` (`\left…\right`), `MATH_GROUP`, and
+     `MATH_ENVIRONMENT` nodes are opaque operands that the break scan never
+     descends into, so their interior operators are likewise excluded.
+   - **Spaced operators only.** An operator candidate has parser
      `MathBreakPriority::Binary` or `MathBreakPriority::Relation`; a unary
      `+`/`-` is `Ord` and never a break site. Typed lowering keeps the semantic
      atom stream intact across continuation segments, so a leading binary

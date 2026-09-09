@@ -1623,6 +1623,22 @@ fn oracle_ranks_relations_above_binaries_and_never_breaks_at_unary_signs() {
 }
 
 #[test]
+fn panache_separates_punctuated_equations_where_badness_chains_relations() {
+    let body = r"\hat{f}_i^{-i} = \sum_{j \neq i} \frac{S_{ij}y_j}{1 - S_{ii}}, \qquad \hat{f}_i = \frac{1}{k} \sum_{j \in \mathcal{N}_i} y_j.";
+    let badness = badness_body(body, OracleContext::Display).expect("Badness display-math oracle");
+    assert_eq!(
+        badness,
+        "  \\hat{f}_i^{-i} = \\sum_{j \\neq i} \\frac{S_{ij}y_j}{1 - S_{ii}}, \\qquad \\hat{f}_i\n                 = \\frac{1}{k} \\sum_{j \\in \\mathcal{N}_i} y_j.",
+    );
+    let panache = panache_body_with_preamble_and_width(body, None, OracleContext::Display, 80)
+        .expect("Panache display-math formatter");
+    assert_eq!(
+        panache,
+        "  \\hat{f}_i^{-i} = \\sum_{j \\neq i} \\frac{S_{ij}y_j}{1 - S_{ii}},\n  \\qquad\n  \\hat{f}_i = \\frac{1}{k} \\sum_{j \\in \\mathcal{N}_i} y_j.",
+    );
+}
+
+#[test]
 fn width_driven_display_migration_slice_matches_badness() {
     let body = "A = aaaaaaaaaa + bbbbbbbbbb = cccccccccc + dddddddddd";
     let width = 22;

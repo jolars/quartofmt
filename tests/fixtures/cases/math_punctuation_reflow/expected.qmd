@@ -1,0 +1,5 @@
+$$
+  \hat{f}_i^{-i} = \sum_{j \neq i} \frac{S_{ij}y_j}{1 - S_{ii}},
+  \qquad
+  \hat{f}_i = \frac{1}{k} \sum_{j \in \mathcal{N}_i} y_j.
+$$

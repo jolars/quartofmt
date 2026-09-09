@@ -1168,10 +1168,27 @@ the continuations far left:
 ```markdown
 $$
   \beta_0 \gets \beta_0 + \frac{4}{n} \sum_{i = 1}^n (y_i - p_i)
-                = \beta_0 - \frac{1}{L_0} \partial_0 F, \qquad L_0
-                = 1/4,
+                = \beta_0 - \frac{1}{L_0} \partial_0 F, \qquad L_0 = 1/4,
 $$
 ```
+
+Top-level punctuation, such as commas and semicolons, separates independent
+expressions. When they do not fit together, Panache can break after the
+punctuation and start the next expression at the display indent. A top-level
+`\qquad` also separates expressions. When Panache wraps at that separator, it
+puts `\qquad` on its own source line:
+
+```markdown
+$$
+  \hat{f}_i^{-i} = \sum_{j \neq i} \frac{S_{ij}y_j}{1 - S_{ii}},
+  \qquad
+  \hat{f}_i = \frac{1}{k} \sum_{j \in \mathcal{N}_i} y_j.
+$$
+```
+
+Expressions that fit together keep `\qquad` inline. Relations align within each
+expression. If the first relation itself wraps, later relations align with its
+new column.
 
 The break is source-cosmetic---math ignores whitespace, so the rendered equation
 is unchanged. The layout is fully deterministic: it depends only on the content,
@@ -1184,8 +1201,8 @@ overflows; operators inside `(…)`, `\left…\right`, or a `{…}` group (inclu
 point. An over-width row with a single relation breaks its binary right-hand
 side; one with no relation at all (a standalone binary chain) breaks with its
 head term first and each following term flush beneath it. Only an equation with
-**no** top-level relation or binary operator (e.g. a single wide `\frac{…}{…}`)
-is left on one line when it overflows.
+**no** top-level punctuation, `\qquad`, relation, or binary operator (e.g. a
+single wide `\frac{…}{…}`) is left on one line when it overflows.
 
 #### Preservation Boundary
 
@@ -1220,6 +1237,9 @@ compensate for a pinned oracle defect:
 - Panache keeps scripted composite relations intact (`<=_i`, `>=_i`, `==_i`).
   The pinned Badness formatter incorrectly splits their relation heads from
   their scripts.
+- Panache wraps independent equations at top-level punctuation. The pinned
+  Badness formatter treats their relations as one chain and can detach an
+  equation's left-hand side from its relation.
 
 ## Links
 

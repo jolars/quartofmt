@@ -600,7 +600,8 @@ environments:
 
 `reflow`
 :   Apply the canonical math style and wrap over-width free display equations at
-    top-level relations and binary operators. This is the default.
+    top-level punctuation, `\qquad` separators, relations, and binary operators.
+    This is the default.
 
 `preserve`
 :   Apply the canonical math style, but retain authored top-level soft line

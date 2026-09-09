@@ -362,6 +362,7 @@ fn try_lower_environment_pieces(
         definition: false,
         conditioning_relation: false,
         punctuation: false,
+        display_separator: false,
         unary: environment_atom.coerced_unary || environment_atom.coerced_postfix,
         dimension_sign: environment_atom.attached_dimension_sign,
         authored_space_before: before_atoms
@@ -1571,6 +1572,8 @@ fn lower_pieces_with_atoms(
             conditioning_relation: atom.break_priority == MathBreakPriority::Relation
                 && atom_source_text(atom, elements).as_deref() == Some(r"\mid"),
             punctuation: atom.class == MathClass::Punct,
+            display_separator: usize::from(atom.range.len()) == r"\qquad".len()
+                && atom_source_text(atom, elements).as_deref() == Some(r"\qquad"),
             unary: atom.coerced_unary || atom.coerced_postfix,
             dimension_sign: atom.attached_dimension_sign,
             authored_space_before: previous_end.is_some_and(|end| end < atom.range.start()),
@@ -1743,20 +1746,23 @@ fn piece_columns(pieces: &[Piece], spacing: Spacing) -> Option<Vec<(usize, usize
     Some(columns)
 }
 
-fn top_level_operators(pieces: &[Piece]) -> Vec<(usize, Role)> {
+fn top_level_pieces(pieces: &[Piece]) -> impl Iterator<Item = (usize, &Piece)> {
     let mut depth = 0usize;
-    let mut operators = Vec::new();
-    for (index, piece) in pieces.iter().enumerate() {
-        if depth == 0 && piece.role != Role::Operand {
-            operators.push((index, piece.role));
-        }
+    pieces.iter().enumerate().filter(move |&(_, piece)| {
+        let top_level = depth == 0;
         match piece.delimiter {
             Some(DelimiterRole::Open) => depth += 1,
             Some(DelimiterRole::Close) => depth = depth.saturating_sub(1),
             Some(DelimiterRole::Fence) | None => {}
         }
-    }
-    operators
+        top_level
+    })
+}
+
+fn top_level_operators(pieces: &[Piece]) -> Vec<(usize, Role)> {
+    top_level_pieces(pieces)
+        .filter_map(|(index, piece)| (piece.role != Role::Operand).then_some((index, piece.role)))
+        .collect()
 }
 
 /// Lay out a typed free-display row with a relation-first hierarchy: relation
@@ -1828,7 +1834,7 @@ fn layout_display_pieces(pieces: &[Piece], line_width: usize, spacing: Spacing) 
     lines_document(lines)
 }
 
-/// Choose only the operator breaks that materially improve a flat display.
+/// Choose only the expression and operator breaks that improve a flat display.
 ///
 /// Overflow is more expensive than an ordinary continuation. Conditioning
 /// relations are the exception: their stronger break penalty can keep a tiny
@@ -1839,6 +1845,7 @@ fn layout_flat_display_pieces(pieces: &[Piece], line_width: usize, spacing: Spac
     // overflow. A conditioning row alone may keep that single column because
     // splitting its predicates is more disruptive than the cosmetic excess.
     const OVERFLOW_COST: u128 = 16;
+    const EXPRESSION_BREAK_COST: u128 = 1;
     const RELATION_BREAK_COST: u128 = 1;
     const FIRST_RELATION_BREAK_COST: u128 = 8;
     const BINARY_BREAK_COST: u128 = 4;
@@ -1874,18 +1881,15 @@ fn layout_flat_display_pieces(pieces: &[Piece], line_width: usize, spacing: Spac
         }
     }
 
-    let operators = top_level_operators(pieces);
-    let mut bounds = Vec::with_capacity(operators.len() + 2);
-    bounds.push(0);
-    bounds.extend(
-        operators
-            .iter()
-            .map(|&(index, _)| index)
-            .filter(|&index| index > 0),
-    );
-    bounds.push(pieces.len());
-    bounds.dedup();
+    #[derive(Clone, Copy)]
+    struct State {
+        score: Score,
+        anchor: Option<usize>,
+        indent: usize,
+        previous: (usize, usize),
+    }
 
+    let bounds = display_breaks(pieces);
     if bounds.len() == 2 {
         return document_from_pieces(pieces, spacing);
     }
@@ -1893,36 +1897,33 @@ fn layout_flat_display_pieces(pieces: &[Piece], line_width: usize, spacing: Spac
     let Some(columns) = piece_columns(pieces, spacing) else {
         return document_from_pieces(pieces, spacing);
     };
-    let relations = operators
-        .iter()
-        .filter_map(|&(index, role)| (role == Role::Relation).then_some(index))
-        .collect::<Vec<_>>();
     let has_conditioning_relation = pieces.iter().any(|piece| piece.conditioning_relation);
-    let indents = bounds
-        .iter()
-        .map(|&start| operator_break_indent(pieces, &columns, &relations, start))
-        .collect::<Vec<_>>();
 
-    let mut best = vec![None::<(Score, usize)>; bounds.len()];
-    best[0] = Some((Score::default(), 0));
+    // A break can move the first relation or start a new independent expression.
+    // Keep alternatives with distinct printed anchors: their future line widths
+    // differ, so the best prefix alone does not determine the best full layout.
+    let mut best = vec![Vec::<State>::new(); bounds.len()];
+    best[0].push(State {
+        score: Score::default(),
+        anchor: None,
+        indent: 0,
+        previous: (0, 0),
+    });
     for end in 1..bounds.len() {
-        for start in 0..end {
-            let Some((score, _)) = best[start] else {
-                continue;
-            };
-            let segment_start = bounds[start];
-            let segment_end = bounds[end];
-            let width = indents[start].saturating_add(
-                columns[segment_end - 1]
-                    .1
-                    .saturating_sub(columns[segment_start].0),
-            );
+        let (prefixes, suffixes) = best.split_at_mut(end);
+        let current = &mut suffixes[0];
+        for (start, states) in prefixes.iter().enumerate() {
+            let boundary = bounds[start];
+            let segment_end = bounds[end].index;
+            let segment_start = boundary.content_start(pieces, segment_end);
             let break_cost = if start == 0 {
                 0
-            } else if has_conditioning_relation && pieces[bounds[start]].role == Role::Relation {
+            } else if boundary.expression_start {
+                EXPRESSION_BREAK_COST
+            } else if has_conditioning_relation && pieces[segment_start].role == Role::Relation {
                 CONDITIONING_RELATION_BREAK_COST
-            } else if pieces[bounds[start]].role == Role::Relation {
-                if relations.first().copied() == Some(bounds[start]) {
+            } else if pieces[segment_start].role == Role::Relation {
+                if boundary.first_relation == Some(segment_start) {
                     FIRST_RELATION_BREAK_COST
                 } else {
                     RELATION_BREAK_COST
@@ -1930,77 +1931,181 @@ fn layout_flat_display_pieces(pieces: &[Piece], line_width: usize, spacing: Spac
             } else {
                 BINARY_BREAK_COST
             };
-            let candidate = score.with_line(width, line_width, break_cost);
-            if best[end].is_none_or(|(current, _)| candidate < current) {
-                best[end] = Some((candidate, start));
+            for (state_index, state) in states.iter().enumerate() {
+                let indent = boundary.indent(pieces, &columns, state.anchor);
+                let score = if segment_start > boundary.index {
+                    state.score.with_line(
+                        columns[boundary.index].1 - columns[boundary.index].0,
+                        line_width,
+                        EXPRESSION_BREAK_COST,
+                    )
+                } else {
+                    state.score
+                };
+                let width = indent.saturating_add(
+                    columns[segment_end - 1]
+                        .1
+                        .saturating_sub(columns[segment_start].0),
+                );
+                let anchor = bounds[end]
+                    .first_relation
+                    .filter(|&relation| relation < segment_end)
+                    .and_then(|relation| {
+                        if relation >= segment_start {
+                            Some(
+                                indent
+                                    .saturating_add(columns[relation].0 - columns[segment_start].0),
+                            )
+                        } else {
+                            state.anchor
+                        }
+                    });
+                let candidate = State {
+                    score: score.with_line(width, line_width, break_cost),
+                    anchor,
+                    indent,
+                    previous: (start, state_index),
+                };
+                if let Some(existing) = current.iter_mut().find(|state| state.anchor == anchor) {
+                    if candidate.score < existing.score {
+                        *existing = candidate;
+                    }
+                } else {
+                    current.push(candidate);
+                }
             }
         }
     }
 
-    let mut ranges = Vec::new();
+    let mut lines = Vec::new();
     let mut end = bounds.len() - 1;
+    let Some((mut state_index, _)) = best[end]
+        .iter()
+        .enumerate()
+        .min_by_key(|(_, state)| state.score)
+    else {
+        return document_from_pieces(pieces, spacing);
+    };
     while end > 0 {
-        let Some((_, start)) = best[end] else {
-            return document_from_pieces(pieces, spacing);
-        };
-        ranges.push((start, end));
+        let state = best[end][state_index];
+        let (start, previous_state) = state.previous;
+        let boundary = bounds[start];
+        let content_start = boundary.content_start(pieces, bounds[end].index);
+        lines.push((
+            state.indent,
+            document_from_pieces(&pieces[content_start..bounds[end].index], spacing),
+        ));
+        if content_start > boundary.index {
+            lines.push((
+                0,
+                document_from_pieces(&pieces[boundary.index..content_start], spacing),
+            ));
+        }
         end = start;
+        state_index = previous_state;
     }
-    ranges.reverse();
-
-    lines_document(
-        ranges
-            .into_iter()
-            .map(|(start, end)| {
-                (
-                    indents[start],
-                    document_from_pieces(&pieces[bounds[start]..bounds[end]], spacing),
-                )
-            })
-            .collect(),
-    )
+    lines.reverse();
+    lines_document(lines)
 }
 
-fn operator_break_indent(
-    pieces: &[Piece],
-    columns: &[(usize, usize)],
-    relations: &[usize],
-    start: usize,
-) -> usize {
-    let Some(piece) = pieces.get(start) else {
-        return 0;
-    };
-    let Some(&first_relation) = relations.first() else {
-        return 0;
-    };
-    let relation_column = columns[first_relation].0;
-    let relation_rhs = columns[first_relation].1.saturating_add(1);
-    let relation_indent = |relation: usize| {
-        if relation == first_relation {
-            0
-        } else if !pieces[first_relation].assignment || pieces[relation].assignment {
-            relation_column
-        } else {
-            relation_rhs
-        }
-    };
+#[derive(Clone, Copy, Default)]
+struct DisplayBreak {
+    index: usize,
+    first_relation: Option<usize>,
+    relation: Option<usize>,
+    expression_start: bool,
+}
 
-    match piece.role {
-        Role::Operand => 0,
-        Role::Relation => relation_indent(start),
-        Role::Binary => {
-            let Some(&relation) = relations.iter().rev().find(|&&relation| relation < start) else {
-                return 0;
-            };
-            if relation == first_relation {
-                relation_rhs
+impl DisplayBreak {
+    fn content_start(self, pieces: &[Piece], end: usize) -> usize {
+        // A selected spacing separator owns a source line, so the following
+        // expression's width and relation anchor exclude the command's width.
+        if self.expression_start && pieces[self.index].display_separator && self.index + 1 < end {
+            self.index + 1
+        } else {
+            self.index
+        }
+    }
+
+    fn indent(self, pieces: &[Piece], columns: &[(usize, usize)], anchor: Option<usize>) -> usize {
+        if self.index == 0 || self.expression_start {
+            return 0;
+        }
+        let (Some(first), Some(relation), Some(anchor)) =
+            (self.first_relation, self.relation, anchor)
+        else {
+            return 0;
+        };
+        let rhs = |index: usize| columns[index].1 - columns[index].0 + 1;
+        let relation_indent = if !pieces[first].assignment || pieces[relation].assignment {
+            anchor
+        } else {
+            anchor.saturating_add(rhs(first))
+        };
+        match pieces[self.index].role {
+            Role::Operand => 0,
+            Role::Relation if self.index == first => 0,
+            Role::Relation => relation_indent,
+            Role::Binary if relation == first => anchor.saturating_add(rhs(first)),
+            Role::Binary => relation_indent.saturating_add(rhs(relation)),
+        }
+    }
+}
+
+fn display_breaks(pieces: &[Piece]) -> Vec<DisplayBreak> {
+    let mut bounds = vec![DisplayBreak::default()];
+    let mut first_relation = None;
+    let mut relation = None;
+    for (index, piece) in top_level_pieces(pieces) {
+        if piece.display_separator && index > 0 && index + 1 < pieces.len() {
+            first_relation = None;
+            relation = None;
+            if let Some(previous) = bounds.last_mut().filter(|bound| bound.index == index) {
+                previous.expression_start = true;
             } else {
-                relation_indent(relation)
-                    .saturating_add(columns[relation].1.saturating_sub(columns[relation].0))
-                    .saturating_add(1)
+                bounds.push(DisplayBreak {
+                    index,
+                    expression_start: true,
+                    ..Default::default()
+                });
+            }
+        }
+        if piece.role == Role::Relation {
+            first_relation.get_or_insert(index);
+            relation = Some(index);
+        }
+        if piece.role != Role::Operand {
+            if let Some(previous) = bounds.last_mut().filter(|bound| bound.index == index) {
+                previous.first_relation = first_relation;
+                previous.relation = relation;
+            } else {
+                bounds.push(DisplayBreak {
+                    index,
+                    first_relation,
+                    relation,
+                    expression_start: false,
+                });
+            }
+        }
+        if piece.punctuation {
+            first_relation = None;
+            relation = None;
+            if index + 1 < pieces.len() && !pieces[index + 1].punctuation {
+                bounds.push(DisplayBreak {
+                    index: index + 1,
+                    expression_start: true,
+                    ..Default::default()
+                });
             }
         }
     }
+    bounds.push(DisplayBreak {
+        index: pieces.len(),
+        first_relation,
+        relation,
+        expression_start: false,
+    });
+    bounds
 }
 
 fn layout_display_segment(
@@ -2728,6 +2833,7 @@ struct Piece {
     /// predicates rather than one relation chain.
     conditioning_relation: bool,
     punctuation: bool,
+    display_separator: bool,
     /// A `+`/`-` that TeX coerced to a unary sign. It binds to the operand
     /// beside it, so it strips the authored space on either side.
     unary: bool,

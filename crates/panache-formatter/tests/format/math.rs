@@ -715,6 +715,98 @@ fn stable_format_math_breaks_standalone_binary_chain() {
 }
 
 #[test]
+fn display_punctuation_starts_independent_relation_chains() {
+    let config = Config {
+        line_width: 24,
+        ..math_config(true)
+    };
+    for punctuation in [",", ";"] {
+        assert_math_host_body(
+            MathHost::DollarDisplay,
+            &format!("A = bbbbbbbbbb{punctuation} B = cccccccccc = dddddddddd"),
+            &format!("  A = bbbbbbbbbb{punctuation}\n  B = cccccccccc\n    = dddddddddd"),
+            &config,
+        );
+    }
+}
+
+#[test]
+fn display_punctuation_keeps_fitting_expressions_together() {
+    assert_math_host_body(
+        MathHost::DollarDisplay,
+        "A = b, B = c; C = d",
+        "  A = b, B = c; C = d",
+        &math_config(true),
+    );
+}
+
+#[test]
+fn display_qquad_separates_wrapped_expressions_on_its_own_line() {
+    let config = Config {
+        line_width: 24,
+        ..math_config(true)
+    };
+    for punctuation in ["", ",", ";"] {
+        assert_math_host_body(
+            MathHost::DollarDisplay,
+            &format!(r"A = bbbbbbbbbb{punctuation} \qquad BBBB = cccccccccc = dddddddddd"),
+            &format!(
+                "  A = bbbbbbbbbb{punctuation}\n  \\qquad\n  BBBB = cccccccccc\n       = dddddddddd"
+            ),
+            &config,
+        );
+    }
+}
+
+#[test]
+fn display_qquad_stays_inline_when_expressions_fit() {
+    assert_math_host_body(
+        MathHost::DollarDisplay,
+        "A = b,\n\\qquad\nB = c",
+        r"  A = b, \qquad B = c",
+        &math_config(true),
+    );
+}
+
+#[test]
+fn display_nested_punctuation_is_not_a_break_point() {
+    let config = Config {
+        line_width: 20,
+        ..math_config(true)
+    };
+    for body in [
+        "(aaaaaaaaaa, bbbbbbbbbb)",
+        "[aaaaaaaaaa; bbbbbbbbbb]",
+        "{aaaaaaaaaa, bbbbbbbbbb}",
+        r"\left( aaaaaaaaaa, bbbbbbbbbb \right)",
+        r"\frac{aaaaaaaaaa, bbbbbbbbbb}{c}",
+        r"(aaaaaaaaaa \qquad bbbbbbbbbb)",
+        r"{aaaaaaaaaa \qquad bbbbbbbbbb}",
+    ] {
+        assert_math_host_body(
+            MathHost::DollarDisplay,
+            body,
+            &indent_math_body(body),
+            &config,
+        );
+    }
+}
+
+#[test]
+fn display_relations_follow_the_wrapped_first_relation() {
+    let config = Config {
+        line_width: 20,
+        ..math_config(true)
+    };
+    assert_math_host_body(
+        MathHost::DollarDisplay,
+        "aaaaaaaaaa = bbbbbbbbbb = cccccccccc",
+        "  aaaaaaaaaa\n  = bbbbbbbbbb\n  = cccccccccc",
+        &config,
+    );
+}
+
+#[test]
 fn rwr_free_displays_choose_complete_operator_segments() {
     let config = math_config(true);
     let cases = [
