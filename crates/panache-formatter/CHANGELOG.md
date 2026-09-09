@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.24.1](https://github.com/jolars/panache/compare/panache-formatter-v0.24.0...panache-formatter-v0.24.1) (2026-09-09)
+
+### Bug Fixes
+- **formatter:** wrap separate math expressions ([`d7685b7`](https://github.com/jolars/panache/commit/d7685b7ee0d18c554814c95462c689d7c793f53a))
+
 ## [0.24.0](https://github.com/jolars/panache/compare/panache-formatter-v0.23.0...panache-formatter-v0.24.0) (2026-09-06)
 
 ### Features
