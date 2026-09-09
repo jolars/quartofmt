@@ -21,10 +21,8 @@ extend-exclude = [
 [format]
 math = "reflow"
 
-[flavor-overrides]
-"TODO.md" = "gfm"
-"AGENTS.md" = "gfm"
-"CONTRIBUTING.md" = "gfm"
+[flavors]
+gfm = ["TODO.md", "AGENTS.md", "CONTRIBUTING.md"]
 
 [formatters]
 r = "air"

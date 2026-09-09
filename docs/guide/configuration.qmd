@@ -34,7 +34,7 @@ Putting the file in `.config/` (the [dot-config](https://dot-config.github.io)
 convention) keeps the project root tidy. A `.config/panache.toml` behaves
 exactly like a `panache.toml` in the directory that contains `.config/`: the
 `.config/` wrapper is purely cosmetic. In particular, **path-based**
-settings---`exclude`, `include`, and `flavor-overrides` glob keys---anchor at
+settings---`exclude`, `include`, and the patterns under `[flavors]`---anchor at
 that parent directory (the project root), so a pattern like `vendor/**` matches
 `vendor/` next to `.config/`, with no `../` prefix needed (see [Path matching
 base](#file-selection-directory-traversal)).
@@ -67,6 +67,9 @@ Merge semantics:
   (parent patterns then child patterns), whereas a plain `exclude` or `include`
   replaces the inherited list. This mirrors the additive naming used elsewhere
   (see [File Selection](#file-selection-directory-traversal)).
+- **`[flavors]` entries merge by path pattern.** A child inherits patterns it
+  does not mention; assigning an inherited pattern to another flavor moves it to
+  that flavor.
 
 Chaining is transitive---`a` may extend `b` which extends `c`---and the values
 flow down the whole chain. A cycle (`a` extends `b` extends `a`) or a missing
@@ -122,6 +125,8 @@ aliases and print a warning. The current crop is:
   `[format] line-ending`)
 - top-level `pandoc-compat` (use `[compat] pandoc`)
 - the top-level or `[format]` `blank-lines` key (now a no-op)
+- `[flavor-overrides]` (use `[flavors]`). It may be removed only in a major
+  release on or after March 8, 2027.
 
 The following were removed in 3.0 and are now rejected (the parse error includes
 a hint pointing at the replacement key where one exists):
@@ -232,15 +237,14 @@ The available flavors are:
     matter); MyST markup extensions (`colon_fence`, `attrs`, `dollarmath`, etc.)
     are opt-in via `[extensions]`, using `myst-colon-fence` and so on. MyST
     files use the plain `.md` extension, so this flavor is opt-in only (set
-    `flavor = "myst"`, use `--flavor myst`, or a
-    [`[flavor-overrides]`](#flavor-overrides) glob); it is never auto-detected
-    from the file extension.
+    `flavor = "myst"`, use `--flavor myst`, or a [`[flavors]`](#flavors)
+    pattern); it is never auto-detected from the file extension.
 
 The `--flavor` CLI flag (see the [CLI reference](../reference/cli.qmd))
 overrides this setting for a single invocation. It also overrides
-[`[flavor-overrides]`](#flavor-overrides) and the flavor inferred from the file
-extension. `[extensions]` overrides from `panache.toml` still merge on top of
-the selected flavor's defaults.
+[`[flavors]`](#flavors) and the flavor inferred from the file extension.
+`[extensions]` overrides from `panache.toml` still merge on top of the selected
+flavor's defaults.
 
 ### Line Width
 
@@ -301,18 +305,33 @@ long-form source lightweight and avoids soft-wrapping in narrow editor
 viewports. Panache always surrounds rules with blank lines, so a compact `---`
 is never reparsed as a YAML delimiter or setext heading underline.
 
-### Flavor Overrides
+### Per-file Flavors {#flavors}
 
-Use `flavor-overrides` to pick flavor by path pattern for Markdown-family files
-(`.md`, `.markdown`, `.mdown`, `.mkd`):
+Use `[flavors]` to pick flavor by path pattern for Markdown-family files (`.md`,
+`.markdown`, `.mdown`, `.mkd`):
 
 ```toml
 flavor = "quarto"
 
+[flavors]
+gfm = ["README.md", "AGENTS.md", "CONTRIBUTING.md"]
+quarto = ["docs/**/*.md"]
+```
+
+Each key is a built-in flavor, and each value is an array of glob patterns. A
+pattern may appear under only one flavor. When several different patterns match
+the same file, the most specific pattern wins.
+
+The former pattern-to-flavor form remains available as a deprecated alias:
+
+```toml
 [flavor-overrides]
 "README.md" = "gfm"
 "docs/**/*.md" = "quarto"
 ```
+
+When both forms assign the same pattern, `[flavors]` wins. The deprecated form
+may be removed only in a major release on or after March 8, 2027.
 
 Panache applies flavor in this order:
 
@@ -320,8 +339,8 @@ Panache applies flavor in this order:
 2. `.qmd` files always use `quarto`
 3. `.Rmd` files always use `rmarkdown`
 4. `.svx` and `.svelte.md` files always use `mdsvex`
-5. Markdown-family files use the most specific matching `flavor-overrides`
-   pattern
+5. Markdown-family files use the flavor associated with the most specific
+   matching `[flavors]` pattern
 6. Otherwise, Panache falls back to top-level `flavor`
 
 ### File Selection (Directory Traversal)
@@ -352,7 +371,7 @@ extend-include = ["*.Rmd"]
 
 Path matching base:
 
-- Relative `include` and `exclude` globs (and `flavor-overrides` glob keys)
+- Relative `include` and `exclude` globs (and patterns under `[flavors]`)
   resolve against the directory of the config file that declared them. A
   `.config/panache.toml` is unwrapped to the project root, so it behaves exactly
   like a `panache.toml` in the directory above `.config/`. The same rule applies

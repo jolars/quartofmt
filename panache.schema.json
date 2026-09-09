@@ -761,6 +761,34 @@
         "$ref": "#/$defs/Flavor"
       },
       "default": {},
+      "deprecated": true,
+      "description": "Deprecated: use `[flavors]`, which groups path patterns by flavor.\nThis alias may be removed in a major release on or after 2027-03-08.",
+      "type": "object"
+    },
+    "flavors": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "default": {},
+      "description": "Preferred flavor-to-path-pattern mapping.",
+      "propertyNames": {
+        "enum": [
+          "pandoc",
+          "quarto",
+          "rmarkdown",
+          "r-markdown",
+          "gfm",
+          "commonmark",
+          "common-mark",
+          "multimarkdown",
+          "multi-markdown",
+          "mdsvex",
+          "myst"
+        ]
+      },
       "type": "object"
     },
     "format": {

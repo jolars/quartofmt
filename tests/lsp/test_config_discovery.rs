@@ -82,7 +82,7 @@ fn lsp_does_not_inherit_panache_toml_above_git_root() {
 }
 
 /// Two documents in the *same directory* with the *same extension* can resolve
-/// to different configs: a `[flavor-overrides]` glob matches on the file name,
+/// to different configs: a `[flavors]` glob matches on the file name,
 /// and the resolved flavor rewrites the extension set the document is parsed
 /// under.
 ///
@@ -91,13 +91,13 @@ fn lsp_does_not_inherit_panache_toml_above_git_root() {
 /// sibling project uses, where discovery genuinely is directory-scoped) would
 /// hand one of these documents the other's config.
 #[test]
-fn flavor_overrides_distinguish_documents_in_one_directory() {
+fn flavors_distinguish_documents_in_one_directory() {
     let tmp = TempDir::new().unwrap();
     let root = tmp.path();
     fs::create_dir_all(root.join(".git")).unwrap();
     fs::write(
         root.join("panache.toml"),
-        "[flavor-overrides]\n\"quarto-ish.md\" = \"quarto\"\n",
+        "[flavors]\nquarto = [\"quarto-ish.md\"]\n",
     )
     .unwrap();
 
@@ -113,6 +113,6 @@ fn flavor_overrides_distinguish_documents_in_one_directory() {
     assert!(
         server.document_salsa_config(quarto_uri.as_str())
             != server.document_salsa_config(plain_uri.as_str()),
-        "a flavor-overrides glob on the file name must not be shared across a directory"
+        "a [flavors] glob on the file name must not be shared across a directory"
     );
 }

@@ -124,6 +124,30 @@ fn test_deprecated_experimental_format_math_warns() {
 }
 
 #[test]
+fn test_deprecated_flavor_overrides_warns_with_removal_policy() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_file = temp_dir.path().join("panache.toml");
+    fs::write(
+        &config_file,
+        "[flavor-overrides]\n\"README.md\" = \"gfm\"\n",
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("panache")
+        .args(["format", "--config", config_file.to_str().unwrap()])
+        .write_stdin("text\n")
+        .assert()
+        .success()
+        .stdout("text\n")
+        .stderr(predicate::str::contains(
+            "`[flavor-overrides]` is deprecated; use `[flavors]`",
+        ))
+        .stderr(predicate::str::contains(
+            "major release on or after 2027-03-08",
+        ));
+}
+
+#[test]
 fn test_format_multiple_files() {
     let temp_dir = TempDir::new().unwrap();
     let file1 = temp_dir.path().join("test1.qmd");

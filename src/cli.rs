@@ -70,8 +70,8 @@ pub struct Cli {
     #[arg(help = "Override the markdown flavor (overrides config and file extension)")]
     #[arg(
         long_help = "Override the markdown flavor for this invocation. Takes the highest \
-        precedence: it overrides any value in panache.toml, the `[flavor-overrides]` glob \
-        table, and the flavor inferred from the file extension. Extension overrides from \
+        precedence: it overrides any value in panache.toml, matching patterns in the \
+        `[flavors]` table, and the flavor inferred from the file extension. Extension overrides from \
         `[extensions]` in panache.toml still merge on top of the flavor's defaults. Useful \
         when the file extension is unknown (e.g. a .txt file containing markdown) or when \
         you want to force a one-off interpretation."

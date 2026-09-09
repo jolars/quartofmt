@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -598,7 +598,14 @@ struct RawConfig {
     include: Option<Vec<String>>,
     #[serde(default)]
     extend_include: Vec<String>,
+    /// Preferred flavor-to-path-pattern mapping.
     #[serde(default)]
+    #[schemars(schema_with = "schema_helpers::flavors_schema")]
+    flavors: BTreeMap<String, Vec<String>>,
+    /// Deprecated: use `[flavors]`, which groups path patterns by flavor.
+    /// This alias may be removed in a major release on or after 2027-03-08.
+    #[serde(default)]
+    #[schemars(schema_with = "schema_helpers::deprecated_flavor_overrides_schema")]
     flavor_overrides: HashMap<String, Flavor>,
 
     /// Deprecated aliases retained under `[experimental]` for migration.
@@ -808,6 +815,7 @@ impl RawConfig {
             .line_ending
             .or(self.line_ending)
             .or(Some(LineEnding::Auto));
+        let flavor_overrides = resolve_flavor_patterns(self.flavors, self.flavor_overrides)?;
 
         Ok(Config {
             extensions: super::resolve_extensions_for_flavor(self.extensions.as_ref(), self.flavor),
@@ -848,10 +856,45 @@ impl RawConfig {
             extend_exclude: self.extend_exclude,
             include: self.include,
             extend_include: self.extend_include,
-            flavor_overrides: self.flavor_overrides,
+            flavor_overrides,
             crossref_prefixes: self.crossref_prefixes,
         })
     }
+}
+
+fn resolve_flavor_patterns(
+    flavors: BTreeMap<String, Vec<String>>,
+    mut deprecated: HashMap<String, Flavor>,
+) -> Result<HashMap<String, Flavor>, String> {
+    let mut preferred: HashMap<String, (Flavor, String)> = HashMap::new();
+
+    for (flavor_name, patterns) in flavors {
+        let Some(flavor) = super::parse_flavor_key(&flavor_name) else {
+            let mut message = format!("unknown flavor `{flavor_name}` in [flavors]");
+            if let Some(suggestion) = super::closest_match(&flavor_name, super::KNOWN_FLAVOR_KEYS) {
+                message.push_str(&format!("; did you mean `{suggestion}`?"));
+            }
+            return Err(message);
+        };
+
+        for pattern in patterns {
+            if let Some((previous, previous_name)) = preferred.get(&pattern)
+                && *previous != flavor
+            {
+                return Err(format!(
+                    "path pattern `{pattern}` appears under both `{previous_name}` and \
+                     `{flavor_name}` in [flavors]"
+                ));
+            }
+            preferred.insert(pattern, (flavor, flavor_name.clone()));
+        }
+    }
+
+    // The preferred spelling wins when both forms assign the same pattern.
+    for (pattern, (flavor, _)) in preferred {
+        deprecated.insert(pattern, flavor);
+    }
+    Ok(deprecated)
 }
 
 /// Resolve formatter configuration into a language → formatter(s) mapping.

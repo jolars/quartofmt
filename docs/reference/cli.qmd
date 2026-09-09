@@ -16,7 +16,7 @@ Panache is a command-line formatter, linter, and language server (implementing t
 :   Synthetic filename to associate with stdin input. This is useful for editor integrations that pipe content via stdin but still need Panache to infer flavor/extensions from file extension (for example: `--stdin-filename doc.qmd`).
 
 `--flavor <FLAVOR>`
-:   Override the markdown flavor for this invocation. Takes the highest precedence: it overrides any value in panache.toml, the `[flavor-overrides]` glob table, and the flavor inferred from the file extension. Extension overrides from `[extensions]` in panache.toml still merge on top of the flavor's defaults. Useful when the file extension is unknown (e.g. a .txt file containing markdown) or when you want to force a one-off interpretation.
+:   Override the markdown flavor for this invocation. Takes the highest precedence: it overrides any value in panache.toml, matching patterns in the `[flavors]` table, and the flavor inferred from the file extension. Extension overrides from `[extensions]` in panache.toml still merge on top of the flavor's defaults. Useful when the file extension is unknown (e.g. a .txt file containing markdown) or when you want to force a one-off interpretation.
 
     Possible values:
 

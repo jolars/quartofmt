@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use schemars::{JsonSchema, Schema, SchemaGenerator};
 
 use panache_formatter::config::FormatterExtensions;
-use panache_parser::Extensions;
+use panache_parser::{Extensions, Flavor};
 
 use super::FormatterDefinition;
 
@@ -66,6 +66,34 @@ pub fn extensions_schema(_generator: &mut SchemaGenerator) -> Schema {
 
 pub fn formatters_schema(generator: &mut SchemaGenerator) -> Schema {
     <HashMap<String, FormatterEntry> as JsonSchema>::json_schema(generator)
+}
+
+/// Schema for `[flavors]`, whose keys are flavor names and whose values are
+/// path-pattern arrays.
+pub fn flavors_schema(_generator: &mut SchemaGenerator) -> Schema {
+    schemars::json_schema!({
+        "type": "object",
+        "description": "Path patterns grouped by Markdown flavor.",
+        "propertyNames": { "enum": known_flavor_keys_json() },
+        "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+        }
+    })
+}
+
+pub fn deprecated_flavor_overrides_schema(generator: &mut SchemaGenerator) -> Schema {
+    let mut schema = <HashMap<String, Flavor> as JsonSchema>::json_schema(generator);
+    schema.insert("deprecated".to_string(), serde_json::Value::Bool(true));
+    schema.insert(
+        "description".to_string(),
+        serde_json::Value::String(
+            "Deprecated: use `[flavors]`, which groups path patterns by flavor. \
+             This alias may be removed in a major release on or after 2027-03-08."
+                .to_string(),
+        ),
+    );
+    schema
 }
 
 /// Union of parser + formatter extension names, sorted and deduplicated, as

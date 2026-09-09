@@ -172,6 +172,42 @@ fn schema_rejects_bad_flavor_enum() {
 }
 
 #[test]
+fn schema_accepts_flavors_table() {
+    let validator = build_validator();
+    let json = toml_to_json(
+        r#"
+[flavors]
+gfm = ["README.md", "AGENTS.md"]
+quarto = ["docs/**/*.md"]
+"#,
+    );
+    let errors: Vec<_> = validator.iter_errors(&json).collect();
+    assert!(errors.is_empty(), "schema errors: {errors:?}");
+}
+
+#[test]
+fn schema_rejects_unknown_flavor_in_flavors_table() {
+    let validator = build_validator();
+    let json = toml_to_json(
+        r#"
+[flavors]
+qarto = ["README.md"]
+"#,
+    );
+    let errors: Vec<_> = validator.iter_errors(&json).collect();
+    assert!(!errors.is_empty(), "schema must reject unknown flavor keys");
+}
+
+#[test]
+fn schema_marks_flavor_overrides_as_deprecated() {
+    let schema = generate_schema_json();
+    assert_eq!(
+        schema.pointer("/properties/flavor-overrides/deprecated"),
+        Some(&Value::Bool(true))
+    );
+}
+
+#[test]
 fn schema_rejects_bad_pandoc_compat_enum() {
     let validator = build_validator();
     let toml = r#"pandoc-compat = "9.0""#;

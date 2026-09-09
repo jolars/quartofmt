@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
 use std::fs;
@@ -126,6 +126,23 @@ fn check_deprecated_blank_lines(s: &str, path: &Path) {
     }
 }
 
+fn check_deprecated_flavor_overrides(s: &str, path: &Path) {
+    let Ok(toml_value) = toml::from_str::<toml::Value>(s) else {
+        return;
+    };
+    let uses_deprecated_form = toml_value
+        .as_table()
+        .is_some_and(|root| root.contains_key("flavor-overrides"));
+
+    if uses_deprecated_form {
+        eprintln!(
+            "Warning: `[flavor-overrides]` is deprecated; use `[flavors]` in {}.\n\
+             It may be removed in a major release on or after 2027-03-08.",
+            path.display()
+        );
+    }
+}
+
 /// A config file that was found but could not be parsed.
 ///
 /// Unlike a plain [`io::Error`] string, this preserves the structured pieces a
@@ -184,6 +201,7 @@ fn parse_config_str(s: &str, path: &Path) -> io::Result<Config> {
 /// existing `io::Result` callers.
 fn parse_config_detailed(s: &str, path: &Path) -> Result<Config, ConfigError> {
     check_deprecated_blank_lines(s, path);
+    check_deprecated_flavor_overrides(s, path);
 
     if let Err(msg) = validate_extension_names(s) {
         return Err(ConfigError {
@@ -458,6 +476,7 @@ fn load_merged_toml(path: &Path, chain: &mut Vec<PathBuf>) -> Result<toml::Table
 
     // Per-file deprecation/validation checks so warnings carry this file's path.
     check_deprecated_blank_lines(&s, path);
+    check_deprecated_flavor_overrides(&s, path);
     if let Err(msg) = validate_extension_names(&s) {
         return Err(ConfigError {
             path: path.to_path_buf(),
@@ -518,12 +537,28 @@ fn expand_tilde(path: &str) -> PathBuf {
 /// Deep-merge `over` onto `base`, with `over` (the extending, more-derived
 /// config) winning. Sub-tables recurse so a partial override (e.g. one
 /// `[format]` key) keeps the base's sibling keys. The additive `extend-exclude`
-/// / `extend-include` arrays concatenate across the chain; every other value
-/// (scalars, plain `exclude`/`include` arrays) is replaced.
+/// / `extend-include` arrays concatenate across the chain. `[flavors]` also
+/// accumulates patterns, with a child assignment moving that pattern from its
+/// inherited flavor. Every other value (scalars, plain `exclude`/`include`
+/// arrays) is replaced.
 fn merge_toml_tables(base: &mut toml::Table, over: toml::Table) {
+    merge_toml_tables_inner(base, over, true);
+}
+
+fn merge_toml_tables_inner(base: &mut toml::Table, over: toml::Table, root: bool) {
     for (key, over_val) in over {
         if !base.contains_key(&key) {
             base.insert(key, over_val);
+            continue;
+        }
+        if root && key == "flavors" {
+            let base_value = base.get_mut(&key).expect("key present");
+            match (base_value, over_val) {
+                (toml::Value::Table(base_table), toml::Value::Table(over_table)) => {
+                    merge_flavors_tables(base_table, over_table);
+                }
+                (base_value, over_value) => *base_value = over_value,
+            }
             continue;
         }
         let additive = key == "extend-exclude" || key == "extend-include";
@@ -536,9 +571,48 @@ fn merge_toml_tables(base: &mut toml::Table, over: toml::Table) {
                     .extend(over_arr);
             }
             toml::Value::Table(over_tbl) if base_val.is_table() => {
-                merge_toml_tables(base_val.as_table_mut().expect("checked is_table"), over_tbl);
+                merge_toml_tables_inner(
+                    base_val.as_table_mut().expect("checked is_table"),
+                    over_tbl,
+                    false,
+                );
             }
             other => *base_val = other,
+        }
+    }
+}
+
+fn merge_flavors_tables(base: &mut toml::Table, over: toml::Table) {
+    let reassigned_patterns: HashSet<String> = over
+        .values()
+        .filter_map(toml::Value::as_array)
+        .flatten()
+        .filter_map(toml::Value::as_str)
+        .map(str::to_owned)
+        .collect();
+
+    for patterns in base
+        .iter_mut()
+        .filter_map(|(_, value)| value.as_array_mut())
+    {
+        patterns.retain(|pattern| {
+            pattern
+                .as_str()
+                .is_none_or(|pattern| !reassigned_patterns.contains(pattern))
+        });
+    }
+
+    for (flavor, over_value) in over {
+        let Some(base_value) = base.get_mut(&flavor) else {
+            base.insert(flavor, over_value);
+            continue;
+        };
+        match over_value {
+            toml::Value::Array(over_patterns) if base_value.is_array() => base_value
+                .as_array_mut()
+                .expect("checked is_array")
+                .extend(over_patterns),
+            other => *base_value = other,
         }
     }
 }
@@ -904,7 +978,7 @@ fn detect_flavor(input_file: Option<&Path>, anchor: Option<&Path>, cfg: &Config)
 
     // Quarto project manifests are `.yml`, but the filename is itself a Quarto
     // marker (Quarto is their only consumer), so they detect as Quarto the same
-    // way `.qmd` does — an explicit `--flavor`/`flavor-overrides` still wins
+    // way `.qmd` does — an explicit `--flavor` still wins
     // upstream. See `linter::quarto_schema::manifest_schema_root`.
     if is_quarto_manifest_filename(input_path) {
         return Some(Flavor::Quarto);
@@ -1027,7 +1101,7 @@ fn unwrap_dot_config(dir: &Path) -> PathBuf {
 }
 
 /// Directory that relative globs declared in `source` anchor against (the
-/// single rule shared by `flavor-overrides` and `exclude`/`include`).
+/// single rule shared by `[flavors]` and `exclude`/`include`).
 ///
 /// A discovered or explicit config anchors at its own directory, with a
 /// `.config/` wrapper unwrapped to the project root so a `.config/panache.toml`
@@ -1078,7 +1152,7 @@ fn expand_glob_pattern(pattern: &str, out: &mut Vec<String>) {
 
 /// A set of `exclude`/`include` globs, anchored at a config directory and
 /// matched against config-directory-relative, forward-slashed paths. Backed by
-/// `globset` (the single engine shared with `flavor-overrides`); negation
+/// `globset` (the single engine shared with `[flavors]`); negation
 /// (`!pattern`) is intentionally unsupported.
 pub struct GlobMatcher {
     set: globset::GlobSet,
@@ -1254,6 +1328,65 @@ mod tests {
 
         let (cfg, _) = load(None, tmp.path(), Some(&md), Some(Flavor::Gfm)).expect("load");
         assert_eq!(cfg.flavor, Flavor::Gfm);
+    }
+
+    #[test]
+    fn flavors_table_selects_flavor_by_pattern() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let cfg_path = tmp.path().join("panache.toml");
+        std::fs::write(&cfg_path, "[flavors]\ngfm = [\"README.md\"]\n").unwrap();
+        let md = tmp.path().join("README.md");
+        std::fs::write(&md, "").unwrap();
+
+        let (cfg, _) = load(None, tmp.path(), Some(&md), None).expect("load");
+        assert_eq!(cfg.flavor, Flavor::Gfm);
+    }
+
+    #[test]
+    fn flavors_table_applies_selected_flavor_extensions() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let cfg_path = tmp.path().join("panache.toml");
+        std::fs::write(
+            &cfg_path,
+            "[flavors]\ngfm = [\"README.md\"]\n\n[extensions.gfm]\ntask-lists = false\n",
+        )
+        .unwrap();
+        let md = tmp.path().join("README.md");
+        std::fs::write(&md, "").unwrap();
+
+        let (cfg, _) = load(None, tmp.path(), Some(&md), None).expect("load");
+        assert_eq!(cfg.flavor, Flavor::Gfm);
+        assert!(!cfg.extensions.task_lists);
+    }
+
+    #[test]
+    fn flavors_table_rejects_an_unknown_flavor() {
+        let toml = "[flavors]\nqarto = [\"README.md\"]\n";
+        let err = parse_config_str(toml, Path::new("panache.toml"))
+            .expect_err("unknown flavor names must be rejected");
+        let message = err.to_string();
+        assert!(message.contains("qarto"), "got: {message}");
+        assert!(message.contains("quarto"), "got: {message}");
+    }
+
+    #[test]
+    fn flavors_table_rejects_a_pattern_assigned_to_two_flavors() {
+        let toml = "[flavors]\ngfm = [\"README.md\"]\nquarto = [\"README.md\"]\n";
+        let err = parse_config_str(toml, Path::new("panache.toml"))
+            .expect_err("one pattern must not select two flavors");
+        let message = err.to_string();
+        assert!(message.contains("README.md"), "got: {message}");
+        assert!(message.contains("gfm"), "got: {message}");
+        assert!(message.contains("quarto"), "got: {message}");
+    }
+
+    #[test]
+    fn flavors_table_wins_over_deprecated_flavor_overrides() {
+        let toml =
+            "[flavor-overrides]\n\"README.md\" = \"quarto\"\n\n[flavors]\ngfm = [\"README.md\"]\n";
+        let cfg = parse_config_str(toml, Path::new("panache.toml"))
+            .expect("both the preferred and deprecated forms must parse");
+        assert_eq!(cfg.flavor_overrides["README.md"], Flavor::Gfm);
     }
 
     #[test]
@@ -1523,6 +1656,26 @@ mod tests {
             panache_parser::semantic::math::ArgKind::Bracket,
             "the child replaces one command's complete positional signature"
         );
+    }
+
+    #[test]
+    fn extend_merges_flavors_by_pattern() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            tmp.path().join("base.toml"),
+            "[flavors]\ngfm = [\"README.md\", \"AGENTS.md\"]\n",
+        )
+        .unwrap();
+        let child = tmp.path().join("panache.toml");
+        std::fs::write(
+            &child,
+            "extend = \"base.toml\"\n\n[flavors]\nquarto = [\"README.md\"]\n",
+        )
+        .unwrap();
+
+        let (cfg, _src) = load(Some(&child), tmp.path(), None, None).expect("load");
+        assert_eq!(cfg.flavor_overrides["README.md"], Flavor::Quarto);
+        assert_eq!(cfg.flavor_overrides["AGENTS.md"], Flavor::Gfm);
     }
 
     #[test]
