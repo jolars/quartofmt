@@ -38,6 +38,7 @@ pub mod table_column_count;
 pub mod undefined_anchor;
 pub mod undefined_references;
 pub mod unspaced_citation;
+pub mod unspaced_list_marker;
 pub mod unsupported_metadata_key;
 pub mod unused_definitions;
 pub mod unused_yaml_anchor;

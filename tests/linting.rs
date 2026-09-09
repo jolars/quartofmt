@@ -1091,6 +1091,49 @@ fn test_swallowed_list_marker_commonmark() {
 }
 
 #[test]
+fn test_unspaced_list_marker() {
+    let input = include_str!("linting/unspaced_list_marker.md");
+    let diagnostics = lint_file("unspaced_list_marker.md");
+    let issues: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.code == "unspaced-list-marker")
+        .collect();
+
+    assert_eq!(issues.len(), 2, "{issues:#?}");
+    let positions: Vec<_> = issues
+        .iter()
+        .map(|d| (d.location.line, d.location.column))
+        .collect();
+    assert_eq!(positions, vec![(2, 3), (8, 4)]);
+    for diagnostic in issues {
+        assert_eq!(diagnostic.severity, panache::linter::Severity::Warning);
+        assert_eq!(&input[diagnostic.location.range], "-\\");
+        assert!(diagnostic.fix.is_none());
+    }
+}
+
+#[test]
+fn test_unspaced_list_marker_can_be_disabled() {
+    let diagnostics = lint_file_with_config(
+        "unspaced_list_marker.md",
+        "[lint.rules]\nunspaced-list-marker = false\n",
+    );
+    assert!(diagnostics.iter().all(|d| d.code != "unspaced-list-marker"));
+}
+
+#[test]
+fn test_unspaced_list_marker_respects_ignore_directives() {
+    let input = format!(
+        "<!-- panache-ignore-lint-start -->\n\n{}\n<!-- panache-ignore-lint-end -->\n",
+        include_str!("linting/unspaced_list_marker.md")
+    );
+    let config = Config::default();
+    let tree = panache::parse(&input, Some(config.clone()));
+    let diagnostics = lint(&tree, &input, &config);
+    assert!(diagnostics.iter().all(|d| d.code != "unspaced-list-marker"));
+}
+
+#[test]
 fn test_unsupported_metadata_key() {
     let diagnostics =
         lint_file_with_config("unsupported_metadata_key.qmd", "flavor = \"quarto\"\n");

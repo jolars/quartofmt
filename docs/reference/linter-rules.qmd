@@ -1754,6 +1754,58 @@ blank line above the run; if the marker is prose (`Prices range from $5` /
 sufficient on its own: any prose following the run would become lazy
 continuation of the final list item, and would need its own blank line too.
 
+### `unspaced-list-marker` {#unspaced-list-marker}
+
+Detects a line consisting of `-\` in paragraph text inside a list.
+
+Severity
+:   Warning
+
+Auto-fix
+:   No
+
+Diagnostic codes
+:   [`unspaced-list-marker`](#unspaced-list-marker)
+
+Description
+
+:   A list marker needs whitespace after the hyphen. A line containing only
+    `-\`, possibly indented, can look like an empty nested item, but the hyphen
+    remains paragraph text. In Pandoc, the backslash before the newline adds a
+    hard line break without creating another list item.
+
+    This rule is enabled by default in all flavors, including when the
+    `escaped-line-breaks` extension is disabled. It flags the missing marker space
+    whether the backslash becomes a hard break or stays literal text. The diagnostic
+    covers only the hyphen and backslash.
+
+    Detection is limited to standalone `-\` lines in list paragraphs. Ordinary soft
+    line breaks, escaped hyphens (`\-`), code, and text inside inline spans are left
+    alone. This is separate from [`swallowed-list-marker`](#swallowed-list-marker),
+    which detects valid marker shapes absorbed into preceding prose because of a
+    missing blank line.
+
+**Example violation:**
+
+```markdown
+- **Case background:**
+  -\
+- **Environmental concerns:**
+```
+
+**Diagnostic:**
+
+```
+warning: [unspaced-list-marker] Missing whitespace after '-': this line is paragraph text
+ --> document.md:2:3
+  = help: If you intended a list item, add a space after '-' and check its
+          indentation. Escape the hyphen as '\-' if it is literal text
+```
+
+**Resolution:** add whitespace after the hyphen and check the indentation if a
+list item was intended. For a literal hyphen, escape it as `\-`. No automatic
+fix is offered because these choices express different intentions.
+
 ### `table-column-count` {#table-column-count}
 
 Detects a pipe table row carrying more cells than its delimiter row declares.
